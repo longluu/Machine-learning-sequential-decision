@@ -7,6 +7,7 @@ https://elifesciences.org/articles/33334
 
 ## My experiments
 The code is selfConsistentModel.m
+
 For experiment 1 and 2, set flagDecisionGiven = 0.
 
 For experiment 3, set flagDecisionGiven = 1.
