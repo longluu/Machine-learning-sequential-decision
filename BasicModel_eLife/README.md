@@ -16,4 +16,4 @@ For experiment 3, set flagDecisionGiven = 1.
 The codes are condEstimMem_ShiftBoundary.m and condEstimMem_DisappearBoundary.m.
 
 This is to deal with the situation when the decision boundary is shifted or disappear and I show that the conditioned Bayesian model can account well for both situations.
-I 
+
