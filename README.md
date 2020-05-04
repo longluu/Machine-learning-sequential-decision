@@ -13,7 +13,7 @@ To gain insight on the decision strategy people used in this task, I employed a 
 
 ![](/figures/fig2.png)
 
-In fact, the model not only accounts for the data pooled from all subjects but can also account for the invidual differences across subjects. Below I show how the model can fit the data of individual subjects by meaningful variations of the parameters. For example, we can see that subjects S2 and S3 have big biases in their judgments and that is due to the high memory noise (i.e. they tend to forget what they saw pretty fast).
+In fact, the model not only accounts for the data pooled from all subjects but can also account for the invidual differences across subjects. Below I show how the model can fit the data of individual subjects by meaningful variations of the parameters. For example, we can see that subjects S2 and S3 have big biases in their judgments and that is due to the high memory noise (i.e. they tend to quickly forget what they saw).
 
 ![](/figures/fig2_2.png)
 
