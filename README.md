@@ -27,9 +27,9 @@ First, in this situation, we fit the model to data in correct trials and predict
 
 ![](/figures/fig4.png)
 
-Now, let's bring it up another level. I fit the model to the data in one experiment and try to predict the data in a totally different experiment. Again, the results demonstrate that the model can generalize very well to a totally different situation.
+Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation.
 
 ![](/figures/fig5.png)
 
-
+So, the power of the model is that it can generalize well to a different situation such as different stimuli, tasks, etc. Just to demonstrate that, I have the codes in the directories "MultiAttributeDecision" and "SunkCostFallacy" to illustrate how the model will predict human behaviors in totally different situations such as making judgments on different attributes/features or incorporating additional evidence. Note that those are purely prediction and there is no data yet but it can illustrate an important point that generative models like Bayesian model inherently possess the power to generalize very well to novel situations.
 
