@@ -23,10 +23,12 @@ In my paper, you can find several other situations that the model can explain th
 # Model predicts data in different conditions
 Ok now we see that the model can fit the data across many different situation with a few meaningful parameters. However, can the model generalize (i.e. predict) the data in a totally new conditions? Because I'm still working on the papers for those situations, I just show 2 examples here.
 
+## Fit correct trials, predict incorrect trials
 First, in this situation, we fit the model to data in correct trials and predict the data in incorrect trials. The  results show that the model can generalize well to another condition.
 
 ![](/figures/fig4.png)
 
+## Fit one experiment, predict another one
 Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation.
 
 ![](/figures/fig5.png)
