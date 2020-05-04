@@ -9,7 +9,7 @@ Below is a simple layout of the experiment (panel b) in which human subjects had
 
 ![](/figures/fig1.png)
 
-To gain insight on the decision strategy people used in this task, I employed a conditioned Bayesian observer model. The model can actually jointly account for data in both tasks with the same set of a few parameters. Notably, the parameters can be easily interepreted and intuitively meaningful (check out the paper if you are interested!).
+To gain insight on the decision strategy people used in this task, I employed a conditioned Bayesian observer model. The key idea is that after making the first judgment, the observer considers that as correct and use it to constrain the subsequent judgment. This was implemented by a conditional prior that is consistent with the first judgment. The model can actually jointly account for data in both tasks with the same set of a few parameters. Notably, the parameters can be easily interepreted and intuitively meaningful (check out the paper if you are interested!).
 
 ![](/figures/fig2.png)
 
