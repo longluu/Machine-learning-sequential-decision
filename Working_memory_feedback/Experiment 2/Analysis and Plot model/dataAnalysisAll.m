@@ -813,7 +813,7 @@ for kk = 1 : length(subjIDAll)
 end
 
 %% Display the fit parameters (10 params)
-subjIDAll = {'1', '2', '3', '4', '5', '6', '7', '8'};
+subjIDAll = {'1'};
 for kk = 1 : length(subjIDAll)
     subjID = subjIDAll{kk};
     fileName = ['FitResult-' subjID '.txt'];

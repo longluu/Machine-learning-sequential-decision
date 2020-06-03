@@ -18,6 +18,7 @@ negLLH = NaN(nLoops, 1);
 % Use binned or unbinned likelihood: 0: unbinned
 %                                    1: binned
 modelType = 1;
+useResampling = 1; % only for self-consistent Bayes
 optimizationAlgorithm = 1;
 SetStartPoint = 0;
 % initialValueAll = [4.3425    6.2248           0.0000     19.1377    -9.6045   3.5283    2.0902    0.9927    0.6813;
@@ -35,11 +36,11 @@ initialValueAll = [6.0243    8.0650           0.0000     32.4649   -19.9032   5.
 binnedLH = 0;
 plotFitProgress = 0;
 plotEstFit = 0;
-subjectID = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh', 'average'}; % 'll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh', 
+subjectID = {'average'}; % 'll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh', 
 expNumber = 1;
 includeIncongruentTrials = 0; 
 correctTrialOnly = 1; 
-fixMotorNoise = 1;
+fixMotorNoise = 0;
 fixLapseRate = 1;
 fixSmoothPrior = 0;
 fixPcw = 0;
@@ -70,7 +71,11 @@ for ll = 1 : length(subjectID)
                     'stdNoiseLevel', 'LapseRate', 'Prior range', 'MemNoise', 'MotorNoise', 'SmoothPrior', 'pCW');
     counter = 1;
     for kk = 1 : nLoops
-        [tempFitParameter, tempNegLLH] = modelFitBayes_01(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);
+        if useResampling == 0        
+            [tempFitParameter, tempNegLLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);
+        else
+            [tempFitParameter, tempNegLLH] = modelFitBayes_Resample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);            
+        end
         fitParameterAll{kk} = tempFitParameter;
         negLLH(kk) = tempNegLLH;
 

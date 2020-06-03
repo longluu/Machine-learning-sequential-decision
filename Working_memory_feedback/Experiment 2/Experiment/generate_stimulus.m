@@ -1,3 +1,4 @@
+%%% Generate the orientation of each line in a trial
 stdNoiseLevel = [3 18];
 nStimOrientation = 13;
 nTrialPerCondition = 70;

@@ -18,6 +18,7 @@ negLLH = NaN(nResample, 1);
 % Use binned or unbinned likelihood: 0: unbinned
 %                                    1: binned
 modelType = 1;
+useResampling = 0; % only for self-consistent Bayes
 optimizationAlgorithm = 1;
 SetStartPoint = 1;
 % initialValueAll = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976  0;
@@ -67,7 +68,11 @@ for ii = 1 : length(subjectID)
         
         
         % Fit the resample
-        [tempFitParameter, tempNegLLH] = modelFitBayes_01(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff);
+        if useResampling == 0
+            [tempFitParameter, tempNegLLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff);
+        else
+            [tempFitParameter, tempNegLLH] = modelFitBayes_Resample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff);            
+        end
         fitParameterAll{kk} = tempFitParameter;
         negLLH(kk) = tempNegLLH;
 

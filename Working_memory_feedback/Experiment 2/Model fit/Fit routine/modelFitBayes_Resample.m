@@ -268,19 +268,18 @@ try
         nm = 1000;
         m = linspace(rangeM(1), rangeM(2), nm);
 
-        nmm = 1200;
-        rangeMM = [min(rangeM)-6*stdMemory max(rangeM)+6*stdMemory];
-        if rangeMM(2) < rangeth(2)
-            rangeMM = rangeth;
+        nmr = 1200;
+        rangeMR = [min(rangeM)-6*stdMemory max(rangeM)+6*stdMemory];
+        if rangeMR(2) < rangeth(2)
+            rangeMR = rangeth;
         end        
-        mm = linspace(rangeMM(1), rangeMM(2), nmm);
+        mr = linspace(rangeMR(1), rangeMR(2), nmr);
 
         M = repmat(m',1,nth);
-        MM_m = repmat(mm',1,nm);
-        MM_th = repmat(mm',1,nth); 
+        MR_th = repmat(mr', 1, nth);
         THm = repmat(th, nm, 1); 
-        THmm = repmat(th, nmm, 1); 
-
+        THmr = repmat(th, nmr, 1);
+        
         %% Correct trials
         % Generative (forward)
         % orientation noise
@@ -395,7 +394,7 @@ try
         end
 
         % remove incorrect trials
-        pthhGthChcw(:, thetaStim < 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim < 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         pthhGthChccw(:, thetaStim > 0) = 0;
 
         pthhGth_correct = pthhGthChcw.*repmat(PChGtheta_lapse(1,:),nth,1) + pthhGthChccw.*repmat(PChGtheta_lapse(2,:),nth,1);

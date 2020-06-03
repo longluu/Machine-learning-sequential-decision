@@ -26,7 +26,7 @@ flagSC = 1; % 1: Self-conditioned
             % 0: Full Bayes
             
 if correctType == 1
-    paramsFit = [6.2041    8.3568           0.0000     31.4168   -19.0927   5.4034    2.6349    0.9999    0.5358]; % no resample    
+    paramsFit = [7.3559    9.9743           0.0000     25.7467   -15.1199   0.1192    4.9975    0.9760    0.5276]; % no resample    
 elseif correctType == 2
     paramsFit = [6.9011    8.7172           0.0000     33.0973   -19.3675   0.8412    2.6349    0.9895    0.5503]; % resample    
 end
