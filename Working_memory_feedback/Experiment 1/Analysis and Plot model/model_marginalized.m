@@ -3,17 +3,18 @@
 flagSC = 1; % 1: self-conditioned model
            % 0: standard Bayes
 includeIncongruentTrials = 0;
-correctType = 2; % 1: no resampling
+correctType = 1; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
-incorrectType = 9; % 1: flip the decision bit
+incorrectType = 10; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample mm, centered on mm, variance: sensory+memory
                    % 4: resample m, centered on m, variance: sensory+memory
                    % 5: lose all information and use prior to make estimate
-                   % 6: set measurement mm at the boundary
+                   % 6: set new likelihood center at the boundary
                    % 7: resample m, centered on m, variance: memory
                    % 8: resample m, centered on m, variance: sensory+memory, No rejection on incorrect side
                    % 9: flip likelihood after conditioning p(mm|theta, Chat)
+                   % 10: set new likelihood center at the estimate
                    
 dstep = 0.1;
 paramsAll = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000];
@@ -766,8 +767,83 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
         pthhGthChccw(:, thetaStim < 0) = 0;
+    elseif incorrectType == 10
+        %% Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
+        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+        pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
+        pthGmmChcw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+        pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
+        pthGmmChcw(isnan(pthGmmChcw)) = 0;
+
+        pthGmmChccw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+        pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
+        pthGmmChccw(isnan(pthGmmChccw)) = 0;
+
+        EthChcw = th * pthGmmChcw;
+        EthChccw = th * pthGmmChccw;
+        % discard repeating/decreasing values (required for interpolation) 
+        indKeepCw = 1:length(EthChcw);
+        while sum(diff(EthChcw)<=0) >0
+            indDiscardCw = [false diff(EthChcw)<=0];
+            EthChcw(indDiscardCw) = [];
+            indKeepCw(indDiscardCw) = [];
+        end
+        indKeepCcw = 1:length(EthChccw);
+        while sum(diff(EthChccw)<=0) >0
+            indDiscardCcw = [diff(EthChccw)<=0 false];
+            EthChccw(indDiscardCcw) = [];
+            indKeepCcw(indDiscardCcw) = [];
+        end
+        
+
+        %% Get the distribution of LH center p(mr| theta, Chat) = p(thetaHat_temp|theta, Chat)
+        % memory noise
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1)); 
+        
+        a = 1./gradient(EthChcw,dstep);
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
+        pmrGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+        pmrGthChcw(pmrGthChcw < 0) = 0; 
+
+        a = 1./gradient(EthChccw,dstep);
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+        pmrGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+        pmrGthChccw(pmrGthChccw < 0) = 0; 
+
+        %% Marginalize over the LH center to get the predictive distribution p(thetaHat|theta, Chat)
+        a = 1./gradient(EthChcw,dstep);
+        b = repmat(a',1,length(thetaStim)) .* pmrGthChcw(indKeepCw, :);        
+        pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChcw(pthhGthChcw < 0) = 0; 
+
+        a = 1./gradient(EthChccw,dstep);
+        b = repmat(a',1,length(thetaStim)) .* pmrGthChccw(indKeepCcw, :);        
+        pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChccw(pthhGthChccw < 0) = 0; 
+
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChccw(:, thetaStim < 0) = 0;            
     end
     pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
     pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
