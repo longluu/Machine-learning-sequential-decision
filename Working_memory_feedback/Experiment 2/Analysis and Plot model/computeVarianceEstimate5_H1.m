@@ -2,8 +2,12 @@
 
 %% Compute the subject LLH
 subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh'}; % 
-estimateCW_FlipEstimate = NaN(length(subjectIDAll), 2);
-estimateCCW_FlipEstimate = NaN(length(subjectIDAll), 2);
+estimateCW_Prior = NaN(length(subjectIDAll), 2);
+estimateCCW_Prior = NaN(length(subjectIDAll), 2);
+estimateCW_LHboundary = NaN(length(subjectIDAll), 2);
+estimateCCW_LHboundary = NaN(length(subjectIDAll), 2);
+estimateCW_LHestimate = NaN(length(subjectIDAll), 2);
+estimateCCW_LHestimate = NaN(length(subjectIDAll), 2);
 estimateCW_FlipDecision = NaN(length(subjectIDAll), 2);
 estimateCCW_FlipDecision = NaN(length(subjectIDAll), 2);
 estimateCW_Resample = NaN(length(subjectIDAll), 2);
@@ -114,15 +118,15 @@ for nn = 1 : length(subjectIDAll)
     angleDiffEst(~indicatorConsistent) = NaN;
     angleDiffEst(binaryDecisionAll == binaryFeedbackAll) = NaN;
     
-    estimateCW_Data(nn, 1) = nanmean(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
-    estimateCCW_Data(nn, 1) = abs(nanmean(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
-    estimateCW_Data(nn, 2) = nanmean(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1));
-    estimateCCW_Data(nn, 2) = abs(nanmean(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
+    estimateCW_Data(nn, 1) = nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
+    estimateCCW_Data(nn, 1) = abs(nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
+    estimateCW_Data(nn, 2) = nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1));
+    estimateCCW_Data(nn, 2) = abs(nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
     
-    ciCW_Data(nn, 1, :) = bootci(1000, @nanmean, angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
-    ciCCW_Data(nn, 1, :) = bootci(1000, @nanmean, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
-    ciCW_Data(nn, 2, :) = bootci(1000, @nanmean, angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1));
-    ciCCW_Data(nn, 2, :) = bootci(1000, @nanmean, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
+    ciCW_Data(nn, 1, :) = bootci(1000, @nanstd, angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
+    ciCCW_Data(nn, 1, :) = bootci(1000, @nanstd, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
+    ciCW_Data(nn, 2, :) = bootci(1000, @nanstd, angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1));
+    ciCCW_Data(nn, 2, :) = bootci(1000, @nanstd, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
 
 %     estimateCW_Data(nn, 1) = nanmedian(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
 %     estimateCCW_Data(nn, 1) = abs(nanmedian(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
@@ -138,11 +142,6 @@ for nn = 1 : length(subjectIDAll)
     flagSC = 1; % 1: self-conditioned model
                % 0: standard Bayes
     includeIncongruentTrials = 0;
-    incorrectType = 1; % 1: flip the estimates
-                       % 2: flip the decision bit
-                       % 3: resample the measurement mm until getting a consistent sample
-                       % 4: lose all information and use prior to make estimate
-
     dstep = 0.1;
     paramsAll = paramsAllSubject(nn, :);
     lapseRate = paramsAll(3);
@@ -307,38 +306,55 @@ for nn = 1 : length(subjectIDAll)
             PChGtheta_lapse_new = PChGtheta_lapse;
         end
 
-        if incorrectType == 1
-            pthhGthChcw_Incorrect = pthhGthChcw;
-            pthhGthChccw_Incorrect = pthhGthChccw;
+        %% Prior only
+        pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
-            % remove correct trials
-            pthhGthChcw_Incorrect(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw_Incorrect(:, thetaStim < 0) = 0;
+        pthhGthChccw = repmat(normpdf(th', pthcw/2, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+        pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+           
 
-            % flip the estimate
-            pthhGthChcw_Incorrect = flipud(pthhGthChcw_Incorrect);
-            pthhGthChccw_Incorrect = flipud(pthhGthChccw_Incorrect);
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
         end
 
-        %% Incorrect type 1
-        pthhGthChcw = pthhGthChcw_Incorrect;
-        pthhGthChccw = pthhGthChccw_Incorrect;
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChccw(:, thetaStim < 0) = 0; 
+
         pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
 
         meanCW = th * pthhGthChcw_norm;
-        meanCW(isnan(meanCW)) = [];
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
         meanCCW = th * pthhGthChccw_norm;
-        meanCCW(isnan(meanCCW)) = [];
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
         weightCW = PChGtheta_lapse(1,thetaStim<=0);
         weightCW = weightCW / sum(weightCW);
         weightCCW = PChGtheta_lapse(2,thetaStim>=0);
         weightCCW = weightCCW / sum(weightCCW);
         
-        estimateCCW_FlipEstimate(nn, kk) = abs(meanCW * weightCW');
-        estimateCW_FlipEstimate(nn, kk) = meanCCW * weightCCW';
+        estimateCCW_Prior(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_Prior(nn, kk) = std_cw * weightCW';
 
-        %% Incorrect type 2
+        %% Flip decision
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
         pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
 
@@ -406,18 +422,31 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
         
         meanCW = th * pthhGthChcw_norm;
-        meanCW(meanCW == 0) = [];
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
         meanCCW = th * pthhGthChccw_norm;
-        meanCCW(meanCCW == 0) = [];
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
         weightCW = PChGtheta_lapse(1,thetaStim<=0);
         weightCW = weightCW / sum(weightCW);
         weightCCW = PChGtheta_lapse(2,thetaStim>=0);
         weightCCW = weightCCW / sum(weightCCW);
         
-        estimateCCW_FlipDecision(nn, kk) = abs(meanCW * weightCW');
-        estimateCW_FlipDecision(nn, kk) = meanCCW * weightCCW';
-
-        %% Incorrect type 3
+        estimateCCW_FlipDecision(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_FlipDecision(nn, kk) = std_cw * weightCW';
+        
+        %% Resample
         % Likelihood centers on mr, variance: sum of sensory and memory           
         pmrGth = exp(-((MR_th-THmr).^2)./(2*(stdSensory(kk)^2 + stdMemory^2)));
         pmrGth = pmrGth./(repmat(sum(pmrGth,1),nmr,1)); 
@@ -504,16 +533,192 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
         
         meanCW = th * pthhGthChcw_norm;
-        meanCW(meanCW == 0) = [];
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
         meanCCW = th * pthhGthChccw_norm;
-        meanCCW(meanCCW == 0) = [];
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
         weightCW = PChGtheta_lapse(1,thetaStim<=0);
         weightCW = weightCW / sum(weightCW);
         weightCCW = PChGtheta_lapse(2,thetaStim>=0);
         weightCCW = weightCCW / sum(weightCCW);
         
-        estimateCCW_Resample(nn, kk) = abs(meanCW * weightCW');
-        estimateCW_Resample(nn, kk) = meanCCW * weightCCW';   
+        estimateCCW_Resample(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_Resample(nn, kk) = std_cw * weightCW';
+        
+        %% LH center at boundary
+        % Compute the estimate
+        pthGmm = normpdf(th, 0, sqrt(stdSensory(kk)^2 + stdMemory^2));
+        pthGmmChcw = pthGmm;
+        pthGmmChcw(th<0) = 0;
+        pthGmmChcw = pthGmmChcw / sum(pthGmmChcw);
+        thhChcw = th * pthGmmChcw';
+        
+        pthhGthChcw = repmat(normpdf(th', -thhChcw, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+
+        pthhGthChccw = repmat(normpdf(th', thhChcw, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+        pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+           
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChccw(:, thetaStim < 0) = 0;    
+        
+        pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
+        pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+        pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
+        pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
+        
+        meanCW = th * pthhGthChcw_norm;
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
+        meanCCW = th * pthhGthChccw_norm;
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
+        weightCW = PChGtheta_lapse(1,thetaStim<=0);
+        weightCW = weightCW / sum(weightCW);
+        weightCCW = PChGtheta_lapse(2,thetaStim>=0);
+        weightCCW = weightCCW / sum(weightCCW);
+        
+        estimateCCW_LHboundary(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_LHboundary(nn, kk) = std_cw * weightCW';       
+        
+        %% LH center at estimate
+        % Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
+        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+        pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
+        pthGmmChcw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+        pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
+        pthGmmChcw(isnan(pthGmmChcw)) = 0;
+
+        pthGmmChccw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+        pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
+        pthGmmChccw(isnan(pthGmmChccw)) = 0;
+
+        EthChcw = th * pthGmmChcw;
+        EthChccw = th * pthGmmChccw;
+        % discard repeating/decreasing values (required for interpolation) 
+        indKeepCw = 1:length(EthChcw);
+        while sum(diff(EthChcw)<=0) >0
+            indDiscardCw = [false diff(EthChcw)<=0];
+            EthChcw(indDiscardCw) = [];
+            indKeepCw(indDiscardCw) = [];
+        end
+        indKeepCcw = 1:length(EthChccw);
+        while sum(diff(EthChccw)<=0) >0
+            indDiscardCcw = [diff(EthChccw)<=0 false];
+            EthChccw(indDiscardCcw) = [];
+            indKeepCcw(indDiscardCcw) = [];
+        end
+        
+
+        % Get the distribution of LH center p(mr| theta, Chat) = p(thetaHat_temp|theta, Chat)
+        % memory noise
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1)); 
+        
+        a = 1./gradient(EthChcw,dstep);
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
+        pmrGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+        pmrGthChcw(pmrGthChcw < 0) = 0; 
+
+        a = 1./gradient(EthChccw,dstep);
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+        pmrGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+        pmrGthChccw(pmrGthChccw < 0) = 0; 
+
+        % Marginalize over the LH center to get the predictive distribution p(thetaHat|theta, Chat)
+        a = 1./gradient(EthChcw,dstep);
+        b = repmat(a',1,length(thetaStim)) .* pmrGthChcw(indKeepCw, :);        
+        pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChcw(pthhGthChcw < 0) = 0; 
+
+        a = 1./gradient(EthChccw,dstep);
+        b = repmat(a',1,length(thetaStim)) .* pmrGthChccw(indKeepCcw, :);        
+        pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChccw(pthhGthChccw < 0) = 0; 
+
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChccw(:, thetaStim < 0) = 0;    
+        
+        pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
+        pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+        pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
+        pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
+        
+        meanCW = th * pthhGthChcw_norm;
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
+        meanCCW = th * pthhGthChccw_norm;
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
+        weightCW = PChGtheta_lapse(1,thetaStim<=0);
+        weightCW = weightCW / sum(weightCW);
+        weightCCW = PChGtheta_lapse(2,thetaStim>=0);
+        weightCCW = weightCCW / sum(weightCCW);
+        
+        estimateCCW_LHestimate(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_LHestimate(nn, kk) = std_cw * weightCW';         
     end
 end
 
@@ -522,6 +727,7 @@ ciCCW_Data(:, 1, 1) = estimateCCW_Data(:, 1) - ciCCW_Data(:, 1, 1);
 ciCW_Data(:, 1, 1) = estimateCW_Data(:, 1) - ciCW_Data(:, 1, 1);
 ciCCW_Data(:, 2, 1) = estimateCCW_Data(:, 2) - ciCCW_Data(:, 2, 1);
 ciCW_Data(:, 2, 1) = estimateCW_Data(:, 2) - ciCW_Data(:, 2, 1);
+
 ciCCW_Data(:, 1, 2) = ciCCW_Data(:, 1, 2) - estimateCCW_Data(:, 1);
 ciCW_Data(:, 1, 2) = ciCW_Data(:, 1, 2) - estimateCW_Data(:, 1);
 ciCCW_Data(:, 2, 2) = ciCCW_Data(:, 2, 2) - estimateCCW_Data(:, 2);
@@ -534,70 +740,10 @@ colorIndex = NaN(length(colorName), 3);
 for ii = 1 : length(colorName)
     colorIndex(ii, :) = rgb(colorName{ii});
 end
-
-subplot(2, 4, 1)
-hold on
 maxPlot = max([estimateCW_Data(:); estimateCCW_Data(:)]) + 3;
 minPlot = min([estimateCW_Data(:); estimateCCW_Data(:)]) - 3;
-set(gca, 'FontSize', 12)
-for ii = 1 : length(subjectIDAll)
-    plot(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), 'o', 'Color', colorIndex(ii, :))
-    errorbarxy(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), ciCCW_Data(ii, 1, 1), ciCCW_Data(ii, 1, 2),...
-                                                                ciCW_Data(ii, 1, 1), ciCW_Data(ii, 1, 2), {'.', 'k', 'k'})
-    plot(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-    errorbarxy(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), ciCCW_Data(ii, 2, 1), ciCCW_Data(ii, 2, 2), ...
-                                                                ciCW_Data(ii, 2, 1), ciCW_Data(ii, 2, 2), {'.', 'k', 'k'})
-end
-plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-xlim([minPlot maxPlot])
-ylim([minPlot maxPlot])
-xlabel('Estimate CCW (deg)')
-ylabel('Estimate CW (deg)')
-title('Data')
 
-subplot(2, 4, 2)
-hold on
-set(gca, 'FontSize', 12)
-for ii = 1 : length(subjectIDAll)
-    plot(estimateCCW_FlipEstimate(ii, 1), estimateCW_FlipEstimate(ii, 1), 'o', 'Color', colorIndex(ii, :))
-    plot(estimateCCW_FlipEstimate(ii, 2), estimateCW_FlipEstimate(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-end
-plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-xlim([minPlot maxPlot])
-ylim([minPlot maxPlot])
-xlabel('Estimate CCW (deg)')
-ylabel('Estimate CW (deg)')
-title('Flip Estimate')
-
-subplot(2, 4, 3)
-hold on
-set(gca, 'FontSize', 12)
-for ii = 1 : length(subjectIDAll)
-    plot(estimateCCW_FlipDecision(ii, 1), estimateCW_FlipDecision(ii, 1), 'o', 'Color', colorIndex(ii, :))
-    plot(estimateCCW_FlipDecision(ii, 2), estimateCW_FlipDecision(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-end
-plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-xlim([minPlot maxPlot])
-ylim([minPlot maxPlot])
-xlabel('Estimate CCW (deg)')
-ylabel('Estimate CW (deg)')
-title('Flip Decision')
-
-subplot(2, 4, 4)
-hold on
-set(gca, 'FontSize', 12)
-for ii = 1 : length(subjectIDAll)
-    plot(estimateCCW_Resample(ii, 1), estimateCW_Resample(ii, 1), 'o', 'Color', colorIndex(ii, :))
-    plot(estimateCCW_Resample(ii, 2), estimateCW_Resample(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-end
-plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-xlim([minPlot maxPlot])
-ylim([minPlot maxPlot])
-xlabel('Estimate CCW (deg)')
-ylabel('Estimate CW (deg)')
-title('Resample')
-
-subplot(2, 4, 5)
+subplot(2, 3, 6)
 hold on
 set(gca, 'FontSize', 30)
 nullX = zeros(1, 7);
@@ -618,9 +764,9 @@ estCCW_Data = estimateCCW_Data(:);
 estCW_Data = estimateCW_Data(:);
 estData = [estCCW_Data; estCW_Data];
 
-estCCW_FlipEstimate = estimateCCW_FlipEstimate (:);
-estCW_FlipEstimate  = estimateCW_FlipEstimate (:);
-estFlipEstimate = [estCCW_FlipEstimate ; estCW_FlipEstimate ];
+estCCW_Prior = estimateCCW_Prior(:);
+estCW_Prior  = estimateCW_Prior(:);
+estPrior = [estCCW_Prior ; estCW_Prior ];
 
 estCCW_FlipDecision = estimateCCW_FlipDecision(:);
 estCW_FlipDecision = estimateCW_FlipDecision(:);
@@ -630,23 +776,31 @@ estCCW_Resample = estimateCCW_Resample(:);
 estCW_Resample = estimateCW_Resample(:);
 estResample = [estCCW_Resample; estCW_Resample];
 
-subplot(2, 4, 6)
+estCCW_LHboundary = estimateCCW_LHboundary(:);
+estCW_LHboundary = estimateCW_LHboundary(:);
+estLHboundary = [estCCW_LHboundary; estCW_LHboundary];
+
+estCCW_LHestimate = estimateCCW_LHestimate(:);
+estCW_LHestimate = estimateCW_LHestimate(:);
+estLHestimate = [estCCW_LHestimate; estCW_LHestimate];
+
+subplot(2, 3, 1)
 hold on
 set(gca, 'FontSize', 12)
 for ii = 1 : length(subjectIDAll)
-    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_FlipEstimate(ii, 1) estimateCW_FlipEstimate(ii, 1)], 'o', 'Color', colorIndex(ii, :))
-    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_FlipEstimate(ii, 2) estimateCW_FlipEstimate(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_Prior(ii, 1) estimateCW_Prior(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_Prior(ii, 2) estimateCW_Prior(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
 xlabel('Mean estimate - data (deg)')
 ylabel('Mean estimate - model (deg)')
-r = round(corr(estData, estFlipEstimate, 'type', 'Pearson'), 2);
-MSE = round(sum((estData - estFlipEstimate).^2) / length(estData), 1);
-title (['Flip Estimate, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+r = round(corr(estData, estPrior, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estPrior).^2) / length(estData), 1);
+title (['Prior only, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
-subplot(2, 4, 7)
+subplot(2, 3, 2)
 hold on
 set(gca, 'FontSize', 12)
 for ii = 1 : length(subjectIDAll)
@@ -662,7 +816,7 @@ r = round(corr(estData, estFlipDecision, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estFlipDecision).^2) / length(estData), 1);
 title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
-subplot(2, 4, 8)
+subplot(2, 3, 3)
 hold on
 set(gca, 'FontSize', 12)
 for ii = 1 : length(subjectIDAll)
@@ -678,4 +832,94 @@ r = round(corr(estData, estResample, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estResample).^2) / length(estData), 1);
 title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
+subplot(2, 3, 4)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_LHboundary(ii, 1) estimateCW_LHboundary(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_LHboundary(ii, 2) estimateCW_LHboundary(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
+r = round(corr(estData, estLHboundary, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estLHboundary).^2) / length(estData), 1);
+title (['LH boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
+subplot(2, 3, 5)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_LHestimate(ii, 1) estimateCW_LHestimate(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_LHestimate(ii, 2) estimateCW_LHestimate(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
+r = round(corr(estData, estLHestimate, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estLHestimate).^2) / length(estData), 1);
+title (['LH estimate, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+
+% subplot(2, 4, 1)
+% hold on
+% set(gca, 'FontSize', 12)
+% for ii = 1 : length(subjectIDAll)
+%     plot(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), 'o', 'Color', colorIndex(ii, :))
+%     errorbarxy(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), ciCCW_Data(ii, 1, 1), ciCCW_Data(ii, 1, 2),...
+%                                                                 ciCW_Data(ii, 1, 1), ciCW_Data(ii, 1, 2), {'.', 'k', 'k'})
+%     plot(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+%     errorbarxy(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), ciCCW_Data(ii, 2, 1), ciCCW_Data(ii, 2, 2), ...
+%                                                                 ciCW_Data(ii, 2, 1), ciCW_Data(ii, 2, 2), {'.', 'k', 'k'})
+% end
+% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+% xlim([minPlot maxPlot])
+% ylim([minPlot maxPlot])
+% xlabel('Estimate CCW (deg)')
+% ylabel('Estimate CW (deg)')
+% title('Data')
+% 
+% subplot(2, 4, 2)
+% hold on
+% set(gca, 'FontSize', 12)
+% for ii = 1 : length(subjectIDAll)
+%     plot(estimateCCW_FlipEstimate(ii, 1), estimateCW_FlipEstimate(ii, 1), 'o', 'Color', colorIndex(ii, :))
+%     plot(estimateCCW_FlipEstimate(ii, 2), estimateCW_FlipEstimate(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+% end
+% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+% xlim([minPlot maxPlot])
+% ylim([minPlot maxPlot])
+% xlabel('Estimate CCW (deg)')
+% ylabel('Estimate CW (deg)')
+% title('Flip Estimate')
+% 
+% subplot(2, 4, 3)
+% hold on
+% set(gca, 'FontSize', 12)
+% for ii = 1 : length(subjectIDAll)
+%     plot(estimateCCW_FlipDecision(ii, 1), estimateCW_FlipDecision(ii, 1), 'o', 'Color', colorIndex(ii, :))
+%     plot(estimateCCW_FlipDecision(ii, 2), estimateCW_FlipDecision(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+% end
+% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+% xlim([minPlot maxPlot])
+% ylim([minPlot maxPlot])
+% xlabel('Estimate CCW (deg)')
+% ylabel('Estimate CW (deg)')
+% title('Flip Decision')
+% 
+% subplot(2, 4, 4)
+% hold on
+% set(gca, 'FontSize', 12)
+% for ii = 1 : length(subjectIDAll)
+%     plot(estimateCCW_Resample(ii, 1), estimateCW_Resample(ii, 1), 'o', 'Color', colorIndex(ii, :))
+%     plot(estimateCCW_Resample(ii, 2), estimateCW_Resample(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+% end
+% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+% xlim([minPlot maxPlot])
+% ylim([minPlot maxPlot])
+% xlabel('Estimate CCW (deg)')
+% ylabel('Estimate CW (deg)')
+% title('Resample')

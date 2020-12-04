@@ -5,7 +5,7 @@ flagSC = 1; % 1: self-conditioned model
 includeIncongruentTrials = 0;
 correctType = 1; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
-incorrectType = 10; % 1: flip the decision bit
+incorrectType = 5; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample mm, centered on mm, variance: sensory+memory
                    % 4: resample m, centered on m, variance: sensory+memory
