@@ -117,11 +117,40 @@ for nn = 1 : length(subjectIDAll)
     indicatorConsistent = sign(angleDiffEst) == binaryFeedbackAll;
     angleDiffEst(~indicatorConsistent) = NaN;
     angleDiffEst(binaryDecisionAll == binaryFeedbackAll) = NaN;
-    
-    estimateCW_Data(nn, 1) = nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
-    estimateCCW_Data(nn, 1) = abs(nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
-    estimateCW_Data(nn, 2) = nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1));
-    estimateCCW_Data(nn, 2) = abs(nanstd(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
+
+    temp_estimateCW_Data_1 = [];
+    temp_estimateCCW_Data_1 = [];
+    temp_estimateCW_Data_2 = [];
+    temp_estimateCCW_Data_2 = [];
+    for ii = 1 : length(angleDiff)
+        tempEst = angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1 & dataAll(:, 1) == angleDiff(ii));
+        tempEst(isnan(tempEst)) = [];
+        if length(tempEst) > 5
+            temp_estimateCW_Data_1 = [temp_estimateCW_Data_1; tempEst];
+        end
+        
+        tempEst = angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1 & dataAll(:, 1) == angleDiff(ii));
+        tempEst(isnan(tempEst)) = [];
+        if length(tempEst) > 5
+            temp_estimateCCW_Data_1 = [temp_estimateCCW_Data_1; tempEst];
+        end    
+        
+        tempEst = angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == 1 & dataAll(:, 1) == angleDiff(ii));
+        tempEst(isnan(tempEst)) = [];
+        if length(tempEst) > 5
+            temp_estimateCW_Data_2 = [temp_estimateCW_Data_2; tempEst];
+        end 
+        
+        tempEst = angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1 & dataAll(:, 1) == angleDiff(ii));
+        tempEst(isnan(tempEst)) = [];
+        if length(tempEst) > 5
+            temp_estimateCCW_Data_2 = [temp_estimateCCW_Data_2; tempEst];
+        end         
+    end
+    estimateCW_Data(nn, 1) = nanstd(temp_estimateCW_Data_1);
+    estimateCCW_Data(nn, 1) = nanstd(temp_estimateCCW_Data_1);
+    estimateCW_Data(nn, 2) = nanstd(temp_estimateCW_Data_2);
+    estimateCCW_Data(nn, 2) = nanstd(temp_estimateCCW_Data_2);
     
     ciCW_Data(nn, 1, :) = bootci(1000, @nanstd, angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == 1));
     ciCCW_Data(nn, 1, :) = bootci(1000, @nanstd, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(1) & binaryFeedbackAll == -1)));
