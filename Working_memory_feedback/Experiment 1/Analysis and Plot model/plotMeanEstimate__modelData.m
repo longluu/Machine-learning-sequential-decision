@@ -1,7 +1,7 @@
-%%%%%%%%%%%%%%%%%%%%%%% Compute the variance of estimates of the models %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Compute the mean estimates of the models %%%%%%%%%%%%%%%%%%%%%%
 
-%% Compute the subject LLH
-subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc'};
+%% Compute the mean estimate for data
+subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc', };
 estimate_FlipEst = NaN(length(subjectIDAll), 2, 8);
 estimate_FlipDecision_2a1 = NaN(length(subjectIDAll), 2, 8);
 estimate_LHboundary_1c = NaN(length(subjectIDAll), 2, 8);
@@ -90,16 +90,16 @@ for nn = 1 : length(subjectIDAll)
     [~, ~, ~, estimateData, ~, ~] = dataForFitting(subjectID, 0, 0);
 
     % Compute meanEstimate
-    stdEstimate = NaN(size(estimateData));
+    meanEstimate = NaN(size(estimateData));
     for ii = 1 : size(estimateData, 1)
         for jj = 1 : size(estimateData, 2)
             tempEst = abs(estimateData{ii, jj});
             if sum(~isnan(tempEst)) > 5
-                stdEstimate(ii, jj) = nanstd(tempEst);
+                meanEstimate(ii, jj) = nanmean(tempEst);
             end
         end
     end
-    estimate_Data(nn, :, :) = stdEstimate;
+    estimate_Data(nn, :, :) = meanEstimate;
     
     %% Compute the mean estimate of models
     flagSC = 1; % 1: self-conditioned model
@@ -269,6 +269,10 @@ for nn = 1 : length(subjectIDAll)
         
         %% Prior model
         % Compute the estimate
+        pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+
         pthhGthChccw = repmat(normpdf(th', pthcw/2, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
@@ -283,13 +287,7 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        std_thhGthChccw = NaN(1, length(mthhGthChccw));
-        for ii = 1 : length(mthhGthChccw)
-            th_centered_squared = (th - mthhGthChccw(ii)).^2;
-            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
-            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
-        end
-        estimate_Prior(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);       
+        estimate_Prior(nn, kk, :) = mthhGthChccw(thetaStim >= 0);       
 
         %% Model 2a1 (Flip decision, Resample: memory, No rejection)
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -354,13 +352,7 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        std_thhGthChccw = NaN(1, length(mthhGthChccw));
-        for ii = 1 : length(mthhGthChccw)
-            th_centered_squared = (th - mthhGthChccw(ii)).^2;
-            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
-            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
-        end
-        estimate_FlipDecision_2a1(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);         
+        estimate_FlipDecision_2a1(nn, kk, :) = mthhGthChccw(thetaStim >= 0);        
 
         %% Incorrect type 3 (Resample)
         % Likelihood centers on mr, variance: sum of sensory and memory           
@@ -442,13 +434,7 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        std_thhGthChccw = NaN(1, length(mthhGthChccw));
-        for ii = 1 : length(mthhGthChccw)
-            th_centered_squared = (th - mthhGthChccw(ii)).^2;
-            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
-            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
-        end
-        estimate_Resample_2b2(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);          
+        estimate_Resample_2b2(nn, kk, :) = mthhGthChccw(thetaStim >= 0);        
                 
         %% Likelihood center at boundary
         % Compute the estimate
@@ -472,13 +458,7 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0; 
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         mthhGthChccw= th * pthhGthChccw_norm;
-        std_thhGthChccw = NaN(1, length(mthhGthChccw));
-        for ii = 1 : length(mthhGthChccw)
-            th_centered_squared = (th - mthhGthChccw(ii)).^2;
-            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
-            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
-        end
-        estimate_LHboundary_1c(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);        
+        estimate_LHboundary_1c(nn, kk, :) = mthhGthChccw(thetaStim >= 0); 
         
         %% Likelihood center at estimate
         % Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
@@ -555,13 +535,8 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0; 
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         mthhGthChccw= th * pthhGthChccw_norm;
-        std_thhGthChccw = NaN(1, length(mthhGthChccw));
-        for ii = 1 : length(mthhGthChccw)
-            th_centered_squared = (th - mthhGthChccw(ii)).^2;
-            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
-            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
-        end
-        estimate_LHestimate_1d(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);                     
+        estimate_LHestimate_1d(nn, kk, :) = mthhGthChccw(thetaStim >= 0); 
+            
     end
 end
 
@@ -608,8 +583,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Standard deviation - data (deg)')
-ylabel('Standard deviation - model (deg)')
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
 r = round(corr(estimate_Data, estimate_Prior, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_Prior).^2) / length(estimate_Data), 1);
 title (['Prior, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -624,8 +599,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Standard deviation - data (deg)')
-ylabel('Standard deviation - model (deg)')
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
 r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
 title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -640,8 +615,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Standard deviation - data (deg)')
-ylabel('Standard deviation - model (deg)')
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
 r = round(corr(estimate_Data, estimate_Resample_2b2, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_Resample_2b2).^2) / length(estimate_Data), 1);
 title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -656,8 +631,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Standard deviation - data (deg)')
-ylabel('Standard deviation - model (deg)')
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
 r = round(corr(estimate_Data, estimate_LHboundary_1c, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_LHboundary_1c).^2) / length(estimate_Data), 1);
 title (['LH at boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -672,8 +647,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Standard deviation - data (deg)')
-ylabel('Standard deviation - model (deg)')
+xlabel('Mean estimate - data (deg)')
+ylabel('Mean estimate - model (deg)')
 r = round(corr(estimate_Data, estimate_LHestimate_1d, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_LHestimate_1d).^2) / length(estimate_Data), 1);
 title (['LH at estimate, r: ' num2str(r) ', MSE: ' num2str(MSE)])

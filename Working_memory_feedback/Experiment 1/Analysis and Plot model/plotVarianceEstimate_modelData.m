@@ -1,7 +1,7 @@
-%%%%%%%%%%%%%%%%%%%%%%% Compute the mean estimates of the models %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Compute the variance of estimates of the models %%%%%%%%%%%%%%%%%%%%%%
 
-%% Compute the subject LLH
-subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc'};
+%% Compute the estimate variance for data
+subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc', 'average'};
 estimate_FlipEst = NaN(length(subjectIDAll), 2, 8);
 estimate_FlipDecision_2a1 = NaN(length(subjectIDAll), 2, 8);
 estimate_LHboundary_1c = NaN(length(subjectIDAll), 2, 8);
@@ -10,19 +10,13 @@ estimate_Resample_2b2 = NaN(length(subjectIDAll), 2, 8);
 estimate_Prior = NaN(length(subjectIDAll), 2, 8);
 estimate_Data = NaN(length(subjectIDAll), 2, 8);
 
-% % No resample for correct trials
-% paramsAllSubject = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
-%                     3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
-%                     4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
-%                     7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
-%                     5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
-
 % Resample for correct trials
 paramsAllSubject = [2.7354    6.1605           0.0000     21.7403     1.5041   0.9972    2.0976;
                     2.7818    9.6676           0.0000     34.4606     0.1772   0.9475    3.1069;
                     3.9181   10.3898           0.0000     29.4658     1.1074   0.9985    3.8106;
                     7.8828   12.2344           0.0000     54.5629     0.1530   0.6860    3.8551;
-                    4.2004    9.4129           0.0000     46.4438     6.0270   0.8464    3.3313];
+                    4.2004    9.4129           0.0000     46.4438     6.0270   0.8464    3.3313;
+                    5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234];
 
 for nn = 1 : length(subjectIDAll)
     subjectID = subjectIDAll{nn};
@@ -90,18 +84,18 @@ for nn = 1 : length(subjectIDAll)
     [~, ~, ~, estimateData, ~, ~] = dataForFitting(subjectID, 0, 0);
 
     % Compute meanEstimate
-    meanEstimate = NaN(size(estimateData));
+    stdEstimate = NaN(size(estimateData));
     for ii = 1 : size(estimateData, 1)
         for jj = 1 : size(estimateData, 2)
             tempEst = abs(estimateData{ii, jj});
             if sum(~isnan(tempEst)) > 5
-                meanEstimate(ii, jj) = nanmean(tempEst);
+                stdEstimate(ii, jj) = nanstd(tempEst);
             end
         end
     end
-    estimate_Data(nn, :, :) = meanEstimate;
+    estimate_Data(nn, :, :) = stdEstimate;
     
-    %% Compute the mean estimate of models
+    %% Compute the estimate variance of models
     flagSC = 1; % 1: self-conditioned model
                % 0: standard Bayes
     includeIncongruentTrials = 0;
@@ -269,10 +263,6 @@ for nn = 1 : length(subjectIDAll)
         
         %% Prior model
         % Compute the estimate
-        pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
-        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
-        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
-
         pthhGthChccw = repmat(normpdf(th', pthcw/2, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
@@ -287,7 +277,13 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_Prior(nn, kk, :) = mthhGthChccw(thetaStim >= 0);       
+        std_thhGthChccw = NaN(1, length(mthhGthChccw));
+        for ii = 1 : length(mthhGthChccw)
+            th_centered_squared = (th - mthhGthChccw(ii)).^2;
+            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
+        end
+        estimate_Prior(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);       
 
         %% Model 2a1 (Flip decision, Resample: memory, No rejection)
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -352,7 +348,13 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_FlipDecision_2a1(nn, kk, :) = mthhGthChccw(thetaStim >= 0);        
+        std_thhGthChccw = NaN(1, length(mthhGthChccw));
+        for ii = 1 : length(mthhGthChccw)
+            th_centered_squared = (th - mthhGthChccw(ii)).^2;
+            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
+        end
+        estimate_FlipDecision_2a1(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);         
 
         %% Incorrect type 3 (Resample)
         % Likelihood centers on mr, variance: sum of sensory and memory           
@@ -434,7 +436,13 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_Resample_2b2(nn, kk, :) = mthhGthChccw(thetaStim >= 0);        
+        std_thhGthChccw = NaN(1, length(mthhGthChccw));
+        for ii = 1 : length(mthhGthChccw)
+            th_centered_squared = (th - mthhGthChccw(ii)).^2;
+            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
+        end
+        estimate_Resample_2b2(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);          
                 
         %% Likelihood center at boundary
         % Compute the estimate
@@ -458,7 +466,13 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0; 
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_LHboundary_1c(nn, kk, :) = mthhGthChccw(thetaStim >= 0); 
+        std_thhGthChccw = NaN(1, length(mthhGthChccw));
+        for ii = 1 : length(mthhGthChccw)
+            th_centered_squared = (th - mthhGthChccw(ii)).^2;
+            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
+        end
+        estimate_LHboundary_1c(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);        
         
         %% Likelihood center at estimate
         % Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
@@ -535,12 +549,17 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0; 
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_LHestimate_1d(nn, kk, :) = mthhGthChccw(thetaStim >= 0); 
-            
+        std_thhGthChccw = NaN(1, length(mthhGthChccw));
+        for ii = 1 : length(mthhGthChccw)
+            th_centered_squared = (th - mthhGthChccw(ii)).^2;
+            var_thhGthChccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_thhGthChccw(ii) = sqrt(var_thhGthChccw);
+        end
+        estimate_LHestimate_1d(nn, kk, :) = std_thhGthChccw(thetaStim >= 0);                     
     end
 end
 
-%% Plot the estimates
+%% Plot individual subjects
 estimate_FlipDecisionAll = estimate_FlipDecision_2a1;
 estimate_ResampleAll = estimate_Resample_2b2;
 estimate_PriorAll = estimate_Prior;
@@ -576,15 +595,15 @@ end
 subplot(1, 5, 1)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)
+for nn = 1 : length(subjectIDAll)-1
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_PriorAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_PriorAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Standard deviation - data (deg)')
+ylabel('Standard deviation - model (deg)')
 r = round(corr(estimate_Data, estimate_Prior, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_Prior).^2) / length(estimate_Data), 1);
 title (['Prior, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -592,15 +611,15 @@ title (['Prior, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(1, 5, 2)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)
+for nn = 1 : length(subjectIDAll)-1
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_FlipDecisionAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_FlipDecisionAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Standard deviation - data (deg)')
+ylabel('Standard deviation - model (deg)')
 r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
 title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -608,15 +627,15 @@ title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(1, 5, 3)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)
+for nn = 1 : length(subjectIDAll)-1
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_ResampleAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_ResampleAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Standard deviation - data (deg)')
+ylabel('Standard deviation - model (deg)')
 r = round(corr(estimate_Data, estimate_Resample_2b2, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_Resample_2b2).^2) / length(estimate_Data), 1);
 title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -624,15 +643,15 @@ title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(1, 5, 4)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)
+for nn = 1 : length(subjectIDAll)-1
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_LHboundaryAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_LHboundaryAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Standard deviation - data (deg)')
+ylabel('Standard deviation - model (deg)')
 r = round(corr(estimate_Data, estimate_LHboundary_1c, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_LHboundary_1c).^2) / length(estimate_Data), 1);
 title (['LH at boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -640,15 +659,64 @@ title (['LH at boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(1, 5, 5)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)
+for nn = 1 : length(subjectIDAll)-1
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_LHestimateAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_LHestimateAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Standard deviation - data (deg)')
+ylabel('Standard deviation - model (deg)')
 r = round(corr(estimate_Data, estimate_LHestimate_1d, 'type', 'Pearson'), 2);
 MSE = round(sum((estimate_Data - estimate_LHestimate_1d).^2) / length(estimate_Data), 1);
 title (['LH at estimate, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+
+%% Plot combined subject
+estimate_FlipDecision_combined = squeeze(estimate_FlipDecisionAll(end, :, :));
+estimate_Resample_combined = squeeze(estimate_ResampleAll(end, :, :));
+estimate_Prior_combined = squeeze(estimate_PriorAll(end, :, :));
+estimate_LHboundary_combined = squeeze(estimate_LHboundaryAll(end, :, :));
+estimate_LHestimate_combined = squeeze(estimate_LHestimateAll(end, :, :));
+estimate_Data_combined = squeeze(estimate_DataAll(end, :, :));
+
+figure
+colorName = {'Green', 'Yellow', 'Orange', 'Brown', 'Teal', 'DodgerBlue'};
+colorIndex = NaN(length(colorName), 3);
+for ii = 1 : length(colorName)
+    colorIndex(ii, :) = rgb(colorName{ii});
+end
+
+subplot(1, 2, 1)
+hold on
+set(gca, 'FontSize', 12)
+plot(angleDiff(8:end), estimate_Data_combined(1, :), 'o', 'Color', colorIndex(1, :))
+plot(angleDiff(8:end), estimate_Prior_combined(1, :), 'Color', colorIndex(2, :))
+plot(angleDiff(8:end), estimate_LHboundary_combined(1, :), 'Color', colorIndex(3, :))
+plot(angleDiff(8:end), estimate_LHestimate_combined(1, :), 'Color', colorIndex(4, :))
+plot(angleDiff(8:end), estimate_FlipDecision_combined(1, :), 'Color', colorIndex(5, :))
+plot(angleDiff(8:end), estimate_Resample_combined(1, :), 'Color', colorIndex(6, :))
+xlim([-1 max(angleDiff)+1])
+ylim([minPlot maxPlot])
+xlabel('Stimulus orientation (deg)')
+ylabel('Standard deviation (deg)')
+r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
+MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
+title ('Low sensory noise')
+
+subplot(1, 2, 2)
+hold on
+set(gca, 'FontSize', 12)
+plot(angleDiff(8:end), estimate_Data_combined(2, :), 'o', 'Color', colorIndex(1, :))
+plot(angleDiff(8:end), estimate_Prior_combined(2, :), 'Color', colorIndex(2, :))
+plot(angleDiff(8:end), estimate_LHboundary_combined(2, :), 'Color', colorIndex(3, :))
+plot(angleDiff(8:end), estimate_LHestimate_combined(2, :), 'Color', colorIndex(4, :))
+plot(angleDiff(8:end), estimate_FlipDecision_combined(2, :), 'Color', colorIndex(5, :))
+plot(angleDiff(8:end), estimate_Resample_combined(2, :), 'Color', colorIndex(6, :))
+xlim([-1 max(angleDiff)+1])
+ylim([minPlot maxPlot])
+xlabel('Stimulus orientation (deg)')
+ylabel('Standard deviation (deg)')
+r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
+MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
+title ('High sensory noise')
