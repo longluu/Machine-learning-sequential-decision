@@ -700,8 +700,6 @@ xlim([-1 max(angleDiff)+1])
 ylim([minPlot maxPlot])
 xlabel('Stimulus orientation (deg)')
 ylabel('Standard deviation (deg)')
-r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
-MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
 title ('Low sensory noise')
 
 subplot(1, 2, 2)
@@ -717,6 +715,4 @@ xlim([-1 max(angleDiff)+1])
 ylim([minPlot maxPlot])
 xlabel('Stimulus orientation (deg)')
 ylabel('Standard deviation (deg)')
-r = round(corr(estimate_Data, estimate_FlipDecision_2a1, 'type', 'Pearson'), 2);
-MSE = round(sum((estimate_Data - estimate_FlipDecision_2a1).^2) / length(estimate_Data), 1);
 title ('High sensory noise')

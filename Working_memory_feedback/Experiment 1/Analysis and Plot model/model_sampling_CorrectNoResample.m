@@ -9,11 +9,12 @@
 subjectID = 'average';
 flagSC = 1; % 1: self-conditioned model
             % 0: standard Bayes
-incorrectType = 5; % 1: flip the decision bit
+incorrectType = 6; % 1: flip the decision bit
                    % 2: flip the estimates thetaHat
                    % 3: resampling distribution (center: memory sample, width: sensory+memory)
                    % 4: resampling distribution (center: sensory sample, width: memory)
                    % 5: resampling distribution (center: sensory sample, width: sensory+memory)
+                   % 6: weight LH width by confidence (KL, multiplicative)
             
 params = [5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
 stdSensory = params(1:2);
@@ -27,10 +28,10 @@ thetaStim = -21:3:21;
 pC = [0.5, 0.5]'; % [cw ccw]
 pthcw = priorRange;
 pthccw = -priorRange;
-nTrialPerCondition = 2000;
+nTrialPerCondition = 4000;
 fontSize = 20;
 fixedConsistencyIndex = 1;
-marginalizedVersion = 1;
+marginalizedVersion = 0;
 if fixedConsistencyIndex
     consistencyIndex = 1;
 end
@@ -380,6 +381,59 @@ elseif incorrectType == 5
             estimateSim(:, jj, kk) = thetaResponse;
             biasEstimateSim(:, jj, kk) = thetaStim(kk) - thetaResponse;
             indexCorrectSim(:, jj, kk) = (tempDiscriminate == correctFeedback);
+        end
+    end 
+elseif incorrectType == 6
+    for jj = 1 : length(stdSensory)
+        for kk = 1 : length(thetaStim)   
+            % Draw a sample and measure
+            m = normrnd(thetaStim(kk), stdSensory(jj),[nTrialPerCondition 1]);
+
+            % Discrimination (Inference from p(C|m))
+            pM_Theta = normpdf(repmat(m,1,nth), repmat(th,nTrialPerCondition,1), stdSensory(jj));
+            pCCW_m = pC(1) .* squeeze(sum((pTheta_CCW .* pM_Theta),2)); 
+            pCW_m = pC(2) .* squeeze(sum((pTheta_CW .* pM_Theta),2));
+            norm_factor = pCCW_m + pCW_m;
+            pCCW_m = pCCW_m ./ norm_factor;
+            pCW_m = pCW_m ./ norm_factor;
+            scaling_factor = pCW_m.*log2(pCW_m./pCCW_m) + pCCW_m.*log2(pCCW_m./pCW_m); 
+            discriminateSim(pCCW_m >= pCW_m, jj, kk) = -1;
+            discriminateSim(pCCW_m < pCW_m, jj, kk) = 1;
+            tempDiscriminate = squeeze(discriminateSim(:,jj,kk));
+
+            % Correct feedback
+            correctFeedback = sign(thetaStim(kk)) * ones(size(m));
+            if thetaStim(kk) < 0
+                pTheta_C_new = pTheta_CCW;
+            elseif thetaStim(kk) > 0
+                pTheta_C_new = pTheta_CW;
+            else
+                inCCW = round(rand(1,nTrialPerCondition));
+                pTheta_C_new(inCCW==1, :) = squeeze(pTheta_CCW(inCCW==1,:));
+                pTheta_C_new(inCCW==0, :) = squeeze(pTheta_CW(inCCW==0,:));
+                correctFeedback(inCCW==1) = -1;
+                correctFeedback(inCCW==0) = 1;
+            end
+            indCorrect = (tempDiscriminate == correctFeedback);
+            n_incorrect = sum(~indCorrect);
+            
+            % Estimation
+            Mm = normrnd(m, stdMemory);    
+            pMm_Theta = normpdf(repmat(Mm,1,nth), repmat(th,nTrialPerCondition,1), sqrt(stdSensory(jj)^2 + stdMemory^2));
+            pMm_Theta(~indCorrect, :) = normpdf(repmat(Mm(~indCorrect),1,nth), repmat(th,n_incorrect,1), (1+scaling_factor(~indCorrect)) * sqrt(stdSensory(jj)^2 + stdMemory^2));
+            pTheta_Mr_c = pTheta_C_new .* pMm_Theta;
+            pMm_c = trapz(th, pTheta_Mr_c, 2);
+            pTheta_Mr_Norm = pTheta_Mr_c ./ repmat(pMm_c, 1, nth);
+            thetaEstimate = trapz(th, repmat(th, nTrialPerCondition, 1) .* pTheta_Mr_Norm, 2);
+            thetaResponse = normrnd(thetaEstimate, stdMotor);
+            if includeIncongruentTrials == 0
+                indexExcludeIncongruent = sign(thetaResponse) ~= sign(thetaEstimate);
+                thetaResponse(indexExcludeIncongruent) = NaN;
+                discriminateSim(indexExcludeIncongruent, jj, kk) = NaN;
+            end
+            estimateSim(:, jj, kk) = thetaResponse;
+            biasEstimateSim(:, jj, kk) = thetaStim(kk) - thetaResponse;
+            indexCorrectSim(:, jj, kk) = indCorrect;
         end
     end    
 end
@@ -929,25 +983,25 @@ biasStd_incorrect = NaN(length(stdSensory), rangeCollapse);
 biasTheory_incorrect = NaN(length(stdSensory), rangeCollapse);
 
 for ii = 1 : length(stdSensory)
-    % Correct trials
-    set(gca,'FontSize',fontSize)
-    hShade = shadedErrorBar(thetaStim, estimateResponseSimCCWAve_correct(ii,:), estimateResponseSimCCWStd_correct(ii,:),... 
-                         {'Color', colorName{ii}, 'LineWidth', lineWidth},1,0,0);        
-    hLegend(ii) = hShade.patch;
-    hold on
-    shadedErrorBar(thetaStim, estimateResponseSimCWAve_correct(ii, :), estimateResponseSimCWStd_correct(ii, :),... 
-                         {'Color', colorName{ii}, 'LineWidth', lineWidth},1,0,0);        
-    if  marginalizedVersion
-        hLegend(ii) = plot(thetaStim, estimateTheoryCCW_Correct(ii,:), 'Color', colorName{ii}, 'LineWidth', lineWidth);
-        plot(thetaStim, estimateTheoryCW_Correct(ii,:), 'Color', colorName{ii}, 'LineWidth', lineWidth);
-    end
-    legendName{ii} = ['Noise level = ' num2str(stdSensory(ii))];
-    xlabel('True angle (degree)')
-    ylabel('Angle estimate (degree)')  
-    plot([-maxPlot maxPlot], [-maxPlot maxPlot], 'k--', 'LineWidth', 2)
-    xlim([-maxPlot maxPlot])
-    ylim([-maxPlot maxPlot])
-    text(6, -15, '+/-1SEM', 'FontSize', 15)
+%     % Correct trials
+%     set(gca,'FontSize',fontSize)
+%     hShade = shadedErrorBar(thetaStim, estimateResponseSimCCWAve_correct(ii,:), estimateResponseSimCCWStd_correct(ii,:),... 
+%                          {'Color', colorName{ii}, 'LineWidth', lineWidth},1,0,0);        
+%     hLegend(ii) = hShade.patch;
+%     hold on
+%     shadedErrorBar(thetaStim, estimateResponseSimCWAve_correct(ii, :), estimateResponseSimCWStd_correct(ii, :),... 
+%                          {'Color', colorName{ii}, 'LineWidth', lineWidth},1,0,0);        
+%     if  marginalizedVersion
+%         hLegend(ii) = plot(thetaStim, estimateTheoryCCW_Correct(ii,:), 'Color', colorName{ii}, 'LineWidth', lineWidth);
+%         plot(thetaStim, estimateTheoryCW_Correct(ii,:), 'Color', colorName{ii}, 'LineWidth', lineWidth);
+%     end
+%     legendName{ii} = ['Noise level = ' num2str(stdSensory(ii))];
+%     xlabel('True angle (degree)')
+%     ylabel('Angle estimate (degree)')  
+%     plot([-maxPlot maxPlot], [-maxPlot maxPlot], 'k--', 'LineWidth', 2)
+%     xlim([-maxPlot maxPlot])
+%     ylim([-maxPlot maxPlot])
+%     text(6, -15, '+/-1SEM', 'FontSize', 15)
 
     % Get the bias
     tempEstimateCW = squeeze(estimateResponseSimCW_correct(:,ii,:));
