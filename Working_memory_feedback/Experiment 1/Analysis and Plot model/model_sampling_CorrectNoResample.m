@@ -28,7 +28,7 @@ thetaStim = -21:3:21;
 pC = [0.5, 0.5]'; % [cw ccw]
 pthcw = priorRange;
 pthccw = -priorRange;
-nTrialPerCondition = 4000;
+nTrialPerCondition = 6000;
 fontSize = 20;
 fixedConsistencyIndex = 1;
 marginalizedVersion = 0;
@@ -396,7 +396,7 @@ elseif incorrectType == 6
             norm_factor = pCCW_m + pCW_m;
             pCCW_m = pCCW_m ./ norm_factor;
             pCW_m = pCW_m ./ norm_factor;
-            scaling_factor = pCW_m.*log2(pCW_m./pCCW_m) + pCCW_m.*log2(pCCW_m./pCW_m); 
+            scaling_factor = pCW_m.*log10(pCW_m./pCCW_m) + pCCW_m.*log10(pCCW_m./pCW_m); 
             discriminateSim(pCCW_m >= pCW_m, jj, kk) = -1;
             discriminateSim(pCCW_m < pCW_m, jj, kk) = 1;
             tempDiscriminate = squeeze(discriminateSim(:,jj,kk));
@@ -420,7 +420,7 @@ elseif incorrectType == 6
             % Estimation
             Mm = normrnd(m, stdMemory);    
             pMm_Theta = normpdf(repmat(Mm,1,nth), repmat(th,nTrialPerCondition,1), sqrt(stdSensory(jj)^2 + stdMemory^2));
-            pMm_Theta(~indCorrect, :) = normpdf(repmat(Mm(~indCorrect),1,nth), repmat(th,n_incorrect,1), (1+scaling_factor(~indCorrect)) * sqrt(stdSensory(jj)^2 + stdMemory^2));
+            pMm_Theta(~indCorrect, :) = normpdf(repmat(Mm(~indCorrect),1,nth), repmat(th,n_incorrect,1), sqrt(((1+scaling_factor(~indCorrect)) * stdSensory(jj)).^2 + stdMemory^2));
             pTheta_Mr_c = pTheta_C_new .* pMm_Theta;
             pMm_c = trapz(th, pTheta_Mr_c, 2);
             pTheta_Mr_Norm = pTheta_Mr_c ./ repmat(pMm_c, 1, nth);

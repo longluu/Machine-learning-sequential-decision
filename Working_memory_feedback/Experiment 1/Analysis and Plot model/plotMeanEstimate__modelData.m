@@ -1,16 +1,17 @@
 %%%%%%%%%%%%%%%%%%%%%%% Compute the mean estimates of the models %%%%%%%%%%%%%%%%%%%%%%
 
 %% Compute the mean estimate for data
-subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc', 'average'};
+subjectIDAll = {'ll', 'an', 'ep', 'jp', 'kc'};
 estimate_FlipEst = NaN(length(subjectIDAll), 2, 8);
 estimate_FlipDecision_2a1 = NaN(length(subjectIDAll), 2, 8);
 estimate_FlipDecision_addMemory = NaN(length(subjectIDAll), 2, 8);
+estimate_Variance = NaN(length(subjectIDAll), 2, 8);
 estimate_LHboundary_1c = NaN(length(subjectIDAll), 2, 8);
 estimate_LHestimate_1d = NaN(length(subjectIDAll), 2, 8);
 estimate_Resample_2b2 = NaN(length(subjectIDAll), 2, 8);
 estimate_Prior = NaN(length(subjectIDAll), 2, 8);
 estimate_Data = NaN(length(subjectIDAll), 2, 8);
-fraction_memory_increase = 1.2;
+std_memory_increase = 2;
 
 % % No resample for correct trials
 % paramsAllSubject = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
@@ -121,7 +122,7 @@ for nn = 1 : length(subjectIDAll)
 
     % memory recall noise
     stdMemory = paramsAll(5);
-    stdMemoryIncorrect = fraction_memory_increase*stdMemory;
+    stdMemoryIncorrect = std_memory_increase * stdMemory;
 
     % motor noise;
     stdMotor = paramsAll(7);
@@ -290,7 +291,29 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw(:, thetaStim < 0) = 0;
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
-        estimate_Prior(nn, kk, :) = mthhGthChccw(thetaStim >= 0);       
+        estimate_Prior(nn, kk, :) = mthhGthChccw(thetaStim >= 0);    
+        
+        %% Variance model
+        % Compute the estimate
+        pthhGthChcw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+
+        pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+        pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+           
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+        mthhGthChccw= th * pthhGthChccw_norm;
+        estimate_Variance(nn, kk, :) = mthhGthChccw(thetaStim >= 0);       
 
         %% Model 2a1 (Flip decision)
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -647,7 +670,7 @@ end
 subplot(2, 3, 1)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_PriorAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_PriorAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
@@ -663,7 +686,7 @@ title (['Prior, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(2, 3, 2)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_FlipDecisionAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_FlipDecisionAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
@@ -679,7 +702,7 @@ title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(2, 3, 3)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_FlipDecision_addMemory_all(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_FlipDecision_addMemory_all(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
@@ -695,7 +718,7 @@ title (['Flip Decision (more memory noise), r: ' num2str(r) ', MSE: ' num2str(MS
 subplot(2, 3, 4)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_ResampleAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_ResampleAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
@@ -711,7 +734,7 @@ title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(2, 3, 5)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_LHboundaryAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_LHboundaryAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
@@ -727,7 +750,7 @@ title (['LH at boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 subplot(2, 3, 6)
 hold on
 set(gca, 'FontSize', 12)
-for nn = 1 : length(subjectIDAll)-1
+for nn = 1 : length(subjectIDAll)
     plot(squeeze(estimate_DataAll(nn, 1, :)), squeeze(estimate_LHestimateAll(nn, 1, :)), 'o', 'Color', colorIndex(nn, :))
     plot(squeeze(estimate_DataAll(nn, 2, :)), squeeze(estimate_LHestimateAll(nn, 2, :)), 'x', 'Color', colorIndex(nn, :))
 end
