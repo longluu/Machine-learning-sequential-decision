@@ -1,17 +1,19 @@
-%%%%%%%%%%%%%%%%%%%%%%% Compute the mean estimate of the models and data %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Compute the Std of estimate of the models and data %%%%%%%%%%%%%%%%%%%%%%
 
 %% Compute the subject LLH
 subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh'}; % 
 estimateCW_Prior = NaN(length(subjectIDAll), 2);
 estimateCCW_Prior = NaN(length(subjectIDAll), 2);
-estimateCW_LHboundary = NaN(length(subjectIDAll), 2);
-estimateCCW_LHboundary = NaN(length(subjectIDAll), 2);
-estimateCW_LHestimate = NaN(length(subjectIDAll), 2);
-estimateCCW_LHestimate = NaN(length(subjectIDAll), 2);
+estimateCW_Variance = NaN(length(subjectIDAll), 2);
+estimateCCW_Variance = NaN(length(subjectIDAll), 2);
+estimateCW_FlipDecisionAddMem = NaN(length(subjectIDAll), 2);
+estimateCCW_FlipDecisionAddMem = NaN(length(subjectIDAll), 2);
 estimateCW_FlipDecision = NaN(length(subjectIDAll), 2);
 estimateCCW_FlipDecision = NaN(length(subjectIDAll), 2);
 estimateCW_Resample = NaN(length(subjectIDAll), 2);
 estimateCCW_Resample = NaN(length(subjectIDAll), 2);
+estimateCW_Surprise = NaN(length(subjectIDAll), 2);
+estimateCCW_Surprise = NaN(length(subjectIDAll), 2);
 
 estimateCW_Data = NaN(length(subjectIDAll), 2);
 estimateCCW_Data = NaN(length(subjectIDAll), 2);
@@ -167,7 +169,7 @@ for nn = 1 : length(subjectIDAll)
 %     ciCCW_Data(nn, 2, :) = bootci(1000, @nanmedian, abs(angleDiffEst(dataAll(:, 4) == stdNoiseLevel(2) & binaryFeedbackAll == -1)));
     
     
-    %% Compute the mean estimate of models
+    %% Compute the Std of estimate of models
     flagSC = 1; % 1: self-conditioned model
                % 0: standard Bayes
     includeIncongruentTrials = 0;
@@ -184,7 +186,7 @@ for nn = 1 : length(subjectIDAll)
 
     % memory recall noise
     stdMemory = paramsAll(6);
-    stdMemoryIncorrect = sqrt(stdMemory^2 + 0^2);
+    stdMemoryIncorrect = 2 * stdMemory;
 
     % motor noise;
     stdMotor = paramsAll(7);
@@ -384,7 +386,7 @@ for nn = 1 : length(subjectIDAll)
         estimateCW_Prior(nn, kk) = std_cw * weightCW';
 
         %% Flip decision
-        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
         pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
 
         pthGmmChcw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
@@ -413,7 +415,7 @@ for nn = 1 : length(subjectIDAll)
 
         a = 1./gradient(EthChcw,dstep);
         % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemoryIncorrect^2)); 
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
         pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
 
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
@@ -586,19 +588,13 @@ for nn = 1 : length(subjectIDAll)
         estimateCCW_Resample(nn, kk) = abs(std_ccw * weightCCW');
         estimateCW_Resample(nn, kk) = std_cw * weightCW';
         
-        %% LH center at boundary
+        %% Variance only
         % Compute the estimate
-        pthGmm = normpdf(th, 0, sqrt(stdSensory(kk)^2 + stdMemory^2));
-        pthGmmChcw = pthGmm;
-        pthGmmChcw(th<0) = 0;
-        pthGmmChcw = pthGmmChcw / sum(pthGmmChcw);
-        thhChcw = th * pthGmmChcw';
-        
-        pthhGthChcw = repmat(normpdf(th', -thhChcw, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = repmat(normpdf(th', -stdSensory(kk), stdMotor), 1, length(thetaStim));
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
         pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
-        pthhGthChccw = repmat(normpdf(th', thhChcw, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
            
@@ -640,18 +636,18 @@ for nn = 1 : length(subjectIDAll)
         weightCCW = PChGtheta_lapse(2,thetaStim>=0);
         weightCCW = weightCCW / sum(weightCCW);
         
-        estimateCCW_LHboundary(nn, kk) = abs(std_ccw * weightCCW');
-        estimateCW_LHboundary(nn, kk) = std_cw * weightCW';       
+        estimateCCW_Variance(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_Variance(nn, kk) = std_cw * weightCW';       
         
-        %% LH center at estimate
-        % Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
-        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+        %% Flip decision + more memory noise
+        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
         pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
-        pthGmmChcw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+
+        pthGmmChcw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
         pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
         pthGmmChcw(isnan(pthGmmChcw)) = 0;
 
-        pthGmmChccw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+        pthGmmChccw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
         pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
         pthGmmChccw(isnan(pthGmmChccw)) = 0;
 
@@ -670,42 +666,29 @@ for nn = 1 : length(subjectIDAll)
             EthChccw(indDiscardCcw) = [];
             indKeepCcw(indDiscardCcw) = [];
         end
-        
 
-        % Get the distribution of LH center p(mr| theta, Chat) = p(thetaHat_temp|theta, Chat)
-        % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
-        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1)); 
-        
         a = 1./gradient(EthChcw,dstep);
+        % memory noise
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemoryIncorrect^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
         pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
         b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
-        pmrGthChcw = interp1(EthChcw,b,th,'linear','extrap');
-        pmrGthChcw(pmrGthChcw < 0) = 0; 
 
-        a = 1./gradient(EthChccw,dstep);
-        % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
-        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
-        pmrGthChccw = interp1(EthChccw,b,th,'linear','extrap');
-        pmrGthChccw(pmrGthChccw < 0) = 0; 
-
-        % Marginalize over the LH center to get the predictive distribution p(thetaHat|theta, Chat)
-        a = 1./gradient(EthChcw,dstep);
-        b = repmat(a',1,length(thetaStim)) .* pmrGthChcw(indKeepCw, :);        
         pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
         % add motor noise
         pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChcw(pthhGthChcw < 0) = 0; 
 
         a = 1./gradient(EthChccw,dstep);
-        b = repmat(a',1,length(thetaStim)) .* pmrGthChccw(indKeepCcw, :);        
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
         pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
         % add motor noise
         pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChccw(pthhGthChccw < 0) = 0; 
-
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
@@ -746,8 +729,116 @@ for nn = 1 : length(subjectIDAll)
         weightCCW = PChGtheta_lapse(2,thetaStim>=0);
         weightCCW = weightCCW / sum(weightCCW);
         
-        estimateCCW_LHestimate(nn, kk) = abs(std_ccw * weightCCW');
-        estimateCW_LHestimate(nn, kk) = std_cw * weightCW';         
+        estimateCCW_FlipDecisionAddMem(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_FlipDecisionAddMem(nn, kk) = std_cw * weightCW';  
+        
+        %% Weight LH width by surprise (KL divergence)
+        % Scale the LH width by KL divergence
+        log_base = 3;        
+        scale_factor = PCGm(2,:).*(log2(PCGm(2,:)./PCGm(1,:)) / log2(log_base)) + PCGm(1,:).*(log2(PCGm(1,:)./PCGm(2,:)) / log2(log_base));
+        stdSensory_scale = sqrt(1+ scale_factor) * stdSensory(kk);
+        pmGth = exp(-((M-THm).^2)./(2*stdSensory_scale.^2)');
+    
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+        pmmGth = pmmGm * pmGth;
+        
+        pthGmmChcw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+        pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
+        pthGmmChcw(isnan(pthGmmChcw)) = 0;
+
+        pthGmmChccw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+        pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
+        pthGmmChccw(isnan(pthGmmChccw)) = 0;
+
+        EthChcw = th * pthGmmChcw;
+        EthChccw = th * pthGmmChccw;
+        % discard the correct part
+        indKeepCw = find(mm>=0);      
+        EthChcw = EthChcw(indKeepCw);
+        while (sum(diff(EthChcw)>=0) > 0) 
+            indDiscardCw = [diff(EthChcw)>=0];
+            EthChcw(indDiscardCw) = [];
+            indKeepCw(indDiscardCw) = [];
+        end
+        
+        indKeepCcw = find(mm<=0);      
+        EthChccw = EthChccw(indKeepCcw);
+        while (sum(diff(EthChccw)>=0) >0)
+            indDiscardCcw = [false diff(EthChccw)>=0];
+            EthChccw(indDiscardCcw) = [];
+            indKeepCcw(indDiscardCcw) = [];
+        end
+
+        a = abs(1./gradient(EthChcw,dstep));
+        % memory noise
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmGth = exp(-((M-THm).^2)./(2*stdSensory(kk)^2));
+        pmGth = pmGth./(repmat(sum(pmGth,1),nm,1)); 
+        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        pmmGthChcw = pmmGthChcw./(repmat(sum(pmmGthChcw,1),nmm,1));  
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
+
+        pthhGthChcw = interp1(EthChcw,b,th,'linear');
+        pthhGthChcw(isnan(pthhGthChcw)) = 0;
+        % add motor noise
+        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChcw(pthhGthChcw < 0) = 0; 
+
+        a = abs(1./gradient(EthChccw,dstep));
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+        pthhGthChccw = interp1(EthChccw,b,th,'linear');
+        pthhGthChccw(isnan(pthhGthChccw)) = 0;
+        % add motor noise
+        pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChccw(pthhGthChccw < 0) = 0; 
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChccw(:, thetaStim < 0) = 0;    
+        
+        pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
+        pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+        pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
+        pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
+        
+        meanCW = th * pthhGthChcw_norm;
+        pthhGthChcw_norm(:, isnan(meanCW) | (meanCW==0)) = [];
+        meanCW(isnan(meanCW) | (meanCW==0)) = [];        
+        meanCCW = th * pthhGthChccw_norm;
+        pthhGthChccw_norm(:, isnan(meanCCW) | (meanCCW==0)) = [];
+        meanCCW(isnan(meanCCW) | (meanCCW==0)) = [];
+        std_ccw = NaN(1, length(meanCCW));
+        std_cw = NaN(1, length(meanCW));
+        for ii = 1 : length(meanCW)
+            th_centered_squared = (th - meanCCW(ii)).^2;
+            var_ccw = th_centered_squared * pthhGthChccw_norm(:, ii);
+            std_ccw(ii) = sqrt(var_ccw);
+            th_centered_squared = (th - meanCW(ii)).^2;
+            var_cw = th_centered_squared * pthhGthChcw_norm(:, ii);
+            std_cw(ii) = sqrt(var_cw);            
+        end
+        
+        weightCW = PChGtheta_lapse(1,thetaStim<=0);
+        weightCW = weightCW / sum(weightCW);
+        weightCCW = PChGtheta_lapse(2,thetaStim>=0);
+        weightCCW = weightCCW / sum(weightCCW);
+        
+        estimateCCW_Surprise(nn, kk) = abs(std_ccw * weightCCW');
+        estimateCW_Surprise(nn, kk) = std_cw * weightCW';       
     end
 end
 
@@ -762,7 +853,7 @@ ciCW_Data(:, 1, 2) = ciCW_Data(:, 1, 2) - estimateCW_Data(:, 1);
 ciCCW_Data(:, 2, 2) = ciCCW_Data(:, 2, 2) - estimateCCW_Data(:, 2);
 ciCW_Data(:, 2, 2) = ciCW_Data(:, 2, 2) - estimateCW_Data(:, 2);
 
-%% Plot the mean estimates
+%% Plot the Std of estimates
 figure
 colorName = {'SlateGray', 'DarkMagenta', 'DarkOrange', 'DarkGoldenRod', 'SpringGreen', 'Teal', 'DodgerBlue', 'Navy'};
 colorIndex = NaN(length(colorName), 3);
@@ -772,7 +863,6 @@ end
 maxPlot = max([estimateCW_Data(:); estimateCCW_Data(:)]) + 3;
 minPlot = min([estimateCW_Data(:); estimateCCW_Data(:)]) - 3;
 
-subplot(2, 3, 6)
 hold on
 set(gca, 'FontSize', 30)
 nullX = zeros(1, 7);
@@ -805,14 +895,19 @@ estCCW_Resample = estimateCCW_Resample(:);
 estCW_Resample = estimateCW_Resample(:);
 estResample = [estCCW_Resample; estCW_Resample];
 
-estCCW_LHboundary = estimateCCW_LHboundary(:);
-estCW_LHboundary = estimateCW_LHboundary(:);
-estLHboundary = [estCCW_LHboundary; estCW_LHboundary];
+estCCW_Variance = estimateCCW_Variance(:);
+estCW_Variance = estimateCW_Variance(:);
+estVariance = [estCCW_Variance; estCW_Variance];
 
-estCCW_LHestimate = estimateCCW_LHestimate(:);
-estCW_LHestimate = estimateCW_LHestimate(:);
-estLHestimate = [estCCW_LHestimate; estCW_LHestimate];
+estCCW_FlipDecisionAddMem = estimateCCW_FlipDecisionAddMem(:);
+estCW_FlipDecisionAddMem = estimateCW_FlipDecisionAddMem(:);
+estFlipDecisionAddMem = [estCCW_FlipDecisionAddMem; estCW_FlipDecisionAddMem];
 
+estCCW_Surprise = estimateCCW_Surprise(:);
+estCW_Surprise = estimateCW_Surprise(:);
+estSurprise= [estCCW_Surprise; estCW_Surprise];
+
+figure
 subplot(2, 3, 1)
 hold on
 set(gca, 'FontSize', 12)
@@ -823,8 +918,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
 r = round(corr(estData, estPrior, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estPrior).^2) / length(estData), 1);
 title (['Prior only, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -839,8 +934,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
 r = round(corr(estData, estFlipDecision, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estFlipDecision).^2) / length(estData), 1);
 title (['Flip Decision, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -855,8 +950,8 @@ end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
 r = round(corr(estData, estResample, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estResample).^2) / length(estData), 1);
 title (['Resample, r: ' num2str(r) ', MSE: ' num2str(MSE)])
@@ -865,33 +960,49 @@ subplot(2, 3, 4)
 hold on
 set(gca, 'FontSize', 12)
 for ii = 1 : length(subjectIDAll)
-    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_LHboundary(ii, 1) estimateCW_LHboundary(ii, 1)], 'o', 'Color', colorIndex(ii, :))
-    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_LHboundary(ii, 2) estimateCW_LHboundary(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_Variance(ii, 1) estimateCW_Variance(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_Variance(ii, 2) estimateCW_Variance(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
-r = round(corr(estData, estLHboundary, 'type', 'Pearson'), 2);
-MSE = round(sum((estData - estLHboundary).^2) / length(estData), 1);
-title (['LH boundary, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
+r = round(corr(estData, estVariance, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estVariance).^2) / length(estData), 1);
+title (['Variance only, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
 subplot(2, 3, 5)
 hold on
 set(gca, 'FontSize', 12)
 for ii = 1 : length(subjectIDAll)
-    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_LHestimate(ii, 1) estimateCW_LHestimate(ii, 1)], 'o', 'Color', colorIndex(ii, :))
-    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_LHestimate(ii, 2) estimateCW_LHestimate(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_FlipDecisionAddMem(ii, 1) estimateCW_FlipDecisionAddMem(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_FlipDecisionAddMem(ii, 2) estimateCW_FlipDecisionAddMem(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
 end
 plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
 xlim([minPlot maxPlot])
 ylim([minPlot maxPlot])
-xlabel('Mean estimate - data (deg)')
-ylabel('Mean estimate - model (deg)')
-r = round(corr(estData, estLHestimate, 'type', 'Pearson'), 2);
-MSE = round(sum((estData - estLHestimate).^2) / length(estData), 1);
-title (['LH estimate, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
+r = round(corr(estData, estFlipDecisionAddMem, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estFlipDecisionAddMem).^2) / length(estData), 1);
+title (['Flip decision + mem noise, r: ' num2str(r) ', MSE: ' num2str(MSE)])
+
+subplot(2, 3, 6)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot([estimateCCW_Data(ii, 1) estimateCW_Data(ii, 1)], [estimateCCW_Surprise(ii, 1) estimateCW_Surprise(ii, 1)], 'o', 'Color', colorIndex(ii, :))
+    plot([estimateCCW_Data(ii, 2) estimateCW_Data(ii, 2)], [estimateCCW_Surprise(ii, 2) estimateCW_Surprise(ii, 2)], 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Std of estimate - data (deg)')
+ylabel('Std of estimate - model (deg)')
+r = round(corr(estData, estSurprise, 'type', 'Pearson'), 2);
+MSE = round(sum((estData - estSurprise).^2) / length(estData), 1);
+title (['Surprise-weighted, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
 % subplot(2, 4, 1)
 % hold on

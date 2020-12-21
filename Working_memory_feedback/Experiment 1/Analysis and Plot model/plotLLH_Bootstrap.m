@@ -2,13 +2,13 @@
 %%%%%%%%%%%%%%%%%%%%%%% Fit params from correct - no resample %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Plot the bootstrap params
-subjID = {'ll'; 'an'; 'ep'; 'jp'; 'kc'; 'average'};
+subjID = {'ll'; 'an'; 'ep'; 'jp'; 'kc'};
 selectInd = [2 3 6 5];
 lowerCI = NaN(length(subjID), length(selectInd));
 upperCI = NaN(length(subjID), length(selectInd));
 paramsBootstrap = cell(1, length(subjID));
 maxIter = 0;
-for kk = 1 : length(subjID);
+for kk = 1 : length(subjID)
     fileName = ['FitResult-Bootstrap-' subjID{kk} '-Resample.txt'];
     fileID = fopen(fileName);
     paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f','CommentStyle','//');
@@ -791,7 +791,7 @@ end
 
 maxY = 1;
 minY = min(lowerConfLogLH(:)) - 0.01;
-colorName = {'DarkOrange', 'Teal', 'DodgerBlue','Purple', 'Red'};
+colorName = {'DarkOrange', 'Teal', 'Green', 'DodgerBlue', 'Red'};
 colorIndex = NaN(length(colorName), 3);
 for ii = 1 : length(colorName)
     colorIndex(ii, :) = rgb(colorName{ii});

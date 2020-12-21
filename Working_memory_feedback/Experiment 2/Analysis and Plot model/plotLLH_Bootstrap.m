@@ -3,14 +3,14 @@
 %%%%%%%%%%%%%%%%%%%%%%% ( the optimal bin is computed in computeOptBin.m) %%%%%%%%%%%%%%%%%%%%%%%
 
 %% Plot the bootstrap params
-subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh', 'average'}; % 
+subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh'}; % 
 selectInd = [2 3 7 5 6 10];
 lowerCI = NaN(length(subjectIDAll), length(selectInd));
 upperCI = NaN(length(subjectIDAll), length(selectInd));
 paramsBootstrap = cell(1, length(subjectIDAll));
 maxIter = 0;
 subjIter = NaN(1, length(subjectIDAll));
-for kk = 1 : length(subjectIDAll);
+for kk = 1 : length(subjectIDAll)
     fileName = ['FitResult-Bootstrap-' subjectIDAll{kk} '-Resample.txt'];
     fileID = fopen(fileName);
     paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f %f','CommentStyle','//');
@@ -104,8 +104,7 @@ box off
 
 %% Compute the subject LLH
 tic
-subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh', 'average'}; % 
-logLH_AllModel = NaN(length(subjectIDAll), 5, maxIter+1);
+logLH_AllModel = NaN(length(subjectIDAll), 6, maxIter+1);
 logLH_Data = NaN(length(subjectIDAll), maxIter+1);
 paramsFit =  paramModel;
 
@@ -162,6 +161,7 @@ for nn = 1 : length(subjectIDAll)
 
         % memory recall noise
         stdMemory = paramsAll(6);
+        stdMemoryIncorrect = 2 * stdMemory;
 
         % motor noise;
         stdMotor = paramsAll(7);
@@ -362,7 +362,51 @@ for nn = 1 : length(subjectIDAll)
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
             logLH_Model(kk, 1) = logLikelihoodEstimate;
+            
+            %% Variance only
+            % Compute the estimate
+            pthhGthChcw = repmat(normpdf(th', -stdSensory(kk), stdMotor), 1, length(thetaStim));
+            pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+            pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
+            pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+            pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+            pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+
+
+            if includeIncongruentTrials == 0
+                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+                pthhGthChccw(th'<= 0, :) = 0;
+                pthhGthChcw(th'> 0, :) = 0;
+            end
+            
+            % remove 'correct' trials
+            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChccw(:, thetaStim < 0) = 0; 
+            pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
+            pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+            pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
+            pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
+            pthhANDth_incorrect = pthhGthChcw_norm + pthhGthChccw_norm;
+            pthhANDth_incorrect(:, thetaStim == 0) = pthhANDth_incorrect(:, thetaStim == 0)/2;
+
+            % compute LLH
+            logLikelihoodEstimate = 0;
+            tempEstimateModelX = th;
+
+            for jj = 1 : length(thetaStim)
+                tempEstimateModelY = pthhANDth_incorrect(:, jj); 
+                tempEstimateModelY = tempEstimateModelY / sum(tempEstimateModelY);            
+                pBin = NaN(1, length(binCenter));
+                for ii = 1 : length(binCenter)
+                    pBin(ii) = sum(tempEstimateModelY(tempEstimateModelX >= binEdge(ii) & tempEstimateModelX < binEdge(ii+1)));
+                end
+                binCount = binCountAll{kk,jj};
+                pBin(pBin == 0) = NaN;
+                logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
+            end
+            logLH_Model(kk, 2) = logLikelihoodEstimate;
+            
             %% Flip decision
             pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
             pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
@@ -448,8 +492,95 @@ for nn = 1 : length(subjectIDAll)
                 pBin(pBin == 0) = NaN;
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
-            logLH_Model(kk, 2) = logLikelihoodEstimate;
+            logLH_Model(kk, 3) = logLikelihoodEstimate;
 
+            %% Flip decision + more memory noise
+            pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemoryIncorrect^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+            pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
+
+            pthGmmChcw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+            pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
+            pthGmmChcw(isnan(pthGmmChcw)) = 0;
+
+            pthGmmChccw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+            pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
+            pthGmmChccw(isnan(pthGmmChccw)) = 0;
+
+            EthChcw = th * pthGmmChcw;
+            EthChccw = th * pthGmmChccw;
+            % discard repeating/decreasing values (required for interpolation) 
+            indKeepCw = 1:length(EthChcw);
+            while sum(diff(EthChcw)<=0) >0
+                indDiscardCw = [false diff(EthChcw)<=0];
+                EthChcw(indDiscardCw) = [];
+                indKeepCw(indDiscardCw) = [];
+            end
+            indKeepCcw = 1:length(EthChccw);
+            while sum(diff(EthChccw)<=0) >0
+                indDiscardCcw = [diff(EthChccw)<=0 false];
+                EthChccw(indDiscardCcw) = [];
+                indKeepCcw(indDiscardCcw) = [];
+            end
+
+            a = 1./gradient(EthChcw,dstep);
+            % memory noise
+            pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemoryIncorrect^2)); 
+            pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+
+            % attention marginalization: compute distribution only over those ms that lead to cw decision!
+            pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+            b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
+
+            pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+            % add motor noise
+            pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
+            pthhGthChcw(pthhGthChcw < 0) = 0; 
+
+            a = 1./gradient(EthChccw,dstep);
+            % attention marginalization: compute distribution only over those ms that lead to cw decision!
+            pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+            b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+            pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+            % add motor noise
+            pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
+            pthhGthChccw(pthhGthChccw < 0) = 0; 
+            pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+            pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+
+            if includeIncongruentTrials == 0
+                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+                pthhGthChccw(th'<= 0, :) = 0;
+                pthhGthChcw(th'> 0, :) = 0;
+            end
+
+            % remove 'correct' trials
+            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChccw(:, thetaStim < 0) = 0;
+            pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
+            pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+            pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
+            pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
+            pthhANDth_incorrect = pthhGthChcw_norm + pthhGthChccw_norm;
+            pthhANDth_incorrect(:, thetaStim == 0) = pthhANDth_incorrect(:, thetaStim == 0)/2;
+            pthhANDth_incorrect = pthhANDth_incorrect / dstep;
+
+            % compute LLH
+            logLikelihoodEstimate = 0;
+            tempEstimateModelX = th;
+
+            for jj = 1 : length(thetaStim)
+                tempEstimateModelY = pthhANDth_incorrect(:, jj); 
+                tempEstimateModelY = tempEstimateModelY / sum(tempEstimateModelY);            
+                pBin = NaN(1, length(binCenter));
+                for ii = 1 : length(binCenter)
+                    pBin(ii) = sum(tempEstimateModelY(tempEstimateModelX >= binEdge(ii) & tempEstimateModelX < binEdge(ii+1)));
+                end
+                binCount = binCountAll{kk,jj};
+                pBin(pBin == 0) = NaN;
+                logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
+            end
+            logLH_Model(kk, 4) = logLikelihoodEstimate;
+            
             %% Resample
             % Likelihood centers on mr, variance: sum of sensory and memory           
             pmrGth = exp(-((MR_th-THmr).^2)./(2*(stdSensory(kk)^2 + stdMemory^2)));
@@ -554,120 +685,73 @@ for nn = 1 : length(subjectIDAll)
                 pBin(pBin == 0) = NaN;
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
-            logLH_Model(kk, 3) = logLikelihoodEstimate;  
+            logLH_Model(kk, 5) = logLikelihoodEstimate;  
             
-            %% Model 1c: LH centered at boundary
-            % Compute the estimate
-            pthGmm = normpdf(th, 0, sqrt(stdSensory(kk)^2 + stdMemory^2));
-            pthGmmChcw = pthGmm;
-            pthGmmChcw(th<0) = 0;
-            pthGmmChcw = pthGmmChcw / sum(pthGmmChcw);
-            thhChcw = th * pthGmmChcw';
+            %% Weight LH width by surprise (KL divergence)
+            % Scale the LH width by KL divergence
+            log_base = 3;        
+            scale_factor = PCGm(2,:).*(log2(PCGm(2,:)./PCGm(1,:)) / log2(log_base)) + PCGm(1,:).*(log2(PCGm(1,:)./PCGm(2,:)) / log2(log_base));
+            stdSensory_scale = sqrt(1+ scale_factor) * stdSensory(kk);
+            pmGth = exp(-((M-THm).^2)./(2*stdSensory_scale.^2)');
 
-            pthhGthChcw = repmat(normpdf(th', -thhChcw, stdMotor), 1, length(thetaStim));
-            pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
-            pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+            pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+            pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+            pmmGth = pmmGm * pmGth;
 
-            pthhGthChccw = repmat(normpdf(th', thhChcw, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
-            pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
-            pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
-
-
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
-
-            % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw(:, thetaStim < 0) = 0;  
-            pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
-            pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
-            pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
-            pthhGthChccw_norm(isnan(pthhGthChccw_norm)) = 0;
-            pthhANDth_incorrect = pthhGthChcw_norm + pthhGthChccw_norm;
-
-            % compute LLH
-            logLikelihoodEstimate = 0;
-            tempEstimateModelX = th;
-
-            for jj = 1 : length(thetaStim)
-                tempEstimateModelY = pthhANDth_incorrect(:, jj); 
-                tempEstimateModelY = tempEstimateModelY / sum(tempEstimateModelY);            
-                pBin = NaN(1, length(binCenter));
-                for ii = 1 : length(binCenter)
-                    pBin(ii) = sum(tempEstimateModelY(tempEstimateModelX >= binEdge(ii) & tempEstimateModelX < binEdge(ii+1)));
-                end
-                binCount = binCountAll{kk,jj};
-                pBin(pBin == 0) = NaN;
-                logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
-            end
-            logLH_Model(kk, 4) = logLikelihoodEstimate;   
-            
-            %% Model 1d: LH centered at estimate
-            % Inference: p(thetaHat|mr, cHat) = N(th, sm^2 + smm^2)           
-            pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
-            pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
-            pthGmmChcw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+            pthGmmChcw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
             pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
             pthGmmChcw(isnan(pthGmmChcw)) = 0;
 
-            pthGmmChccw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+            pthGmmChccw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
             pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
             pthGmmChccw(isnan(pthGmmChccw)) = 0;
 
             EthChcw = th * pthGmmChcw;
             EthChccw = th * pthGmmChccw;
-            % discard repeating/decreasing values (required for interpolation) 
-            indKeepCw = 1:length(EthChcw);
-            while sum(diff(EthChcw)<=0) >0
-                indDiscardCw = [false diff(EthChcw)<=0];
+            % discard the correct part
+            indKeepCw = find(mm>=0);      
+            EthChcw = EthChcw(indKeepCw);
+            while (sum(diff(EthChcw)>=0) > 0) 
+                indDiscardCw = [diff(EthChcw)>=0];
                 EthChcw(indDiscardCw) = [];
                 indKeepCw(indDiscardCw) = [];
             end
-            indKeepCcw = 1:length(EthChccw);
-            while sum(diff(EthChccw)<=0) >0
-                indDiscardCcw = [diff(EthChccw)<=0 false];
+
+            indKeepCcw = find(mm<=0);      
+            EthChccw = EthChccw(indKeepCcw);
+            while (sum(diff(EthChccw)>=0) >0)
+                indDiscardCcw = [false diff(EthChccw)>=0];
                 EthChccw(indDiscardCcw) = [];
                 indKeepCcw(indDiscardCcw) = [];
             end
 
-
-            % Get the distribution of LH center p(mr| theta, Chat) = p(thetaHat_temp|theta, Chat)
+            a = abs(1./gradient(EthChcw,dstep));
             % memory noise
             pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
-            pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1)); 
+            pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
 
-            a = 1./gradient(EthChcw,dstep);
             % attention marginalization: compute distribution only over those ms that lead to cw decision!
+            pmGth = exp(-((M-THm).^2)./(2*stdSensory(kk)^2));
+            pmGth = pmGth./(repmat(sum(pmGth,1),nm,1)); 
             pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+            pmmGthChcw = pmmGthChcw./(repmat(sum(pmmGthChcw,1),nmm,1));  
             b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
-            pmrGthChcw = interp1(EthChcw,b,th,'linear','extrap');
-            pmrGthChcw(pmrGthChcw < 0) = 0; 
 
-            a = 1./gradient(EthChccw,dstep);
-            % attention marginalization: compute distribution only over those ms that lead to cw decision!
-            pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
-            b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
-            pmrGthChccw = interp1(EthChccw,b,th,'linear','extrap');
-            pmrGthChccw(pmrGthChccw < 0) = 0; 
-
-            % Marginalize over the LH center to get the predictive distribution p(thetaHat|theta, Chat)
-            a = 1./gradient(EthChcw,dstep);
-            b = repmat(a',1,length(thetaStim)) .* pmrGthChcw(indKeepCw, :);        
-            pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+            pthhGthChcw = interp1(EthChcw,b,th,'linear');
+            pthhGthChcw(isnan(pthhGthChcw)) = 0;
             % add motor noise
             pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
             pthhGthChcw(pthhGthChcw < 0) = 0; 
 
-            a = 1./gradient(EthChccw,dstep);
-            b = repmat(a',1,length(thetaStim)) .* pmrGthChccw(indKeepCcw, :);        
-            pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+            a = abs(1./gradient(EthChccw,dstep));
+            % attention marginalization: compute distribution only over those ms that lead to cw decision!
+            pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+            b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+            pthhGthChccw = interp1(EthChccw,b,th,'linear');
+            pthhGthChccw(isnan(pthhGthChccw)) = 0;
             % add motor noise
             pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
             pthhGthChccw(pthhGthChccw < 0) = 0; 
-
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
@@ -701,7 +785,7 @@ for nn = 1 : length(subjectIDAll)
                 pBin(pBin == 0) = NaN;
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
-            logLH_Model(kk, 5) = logLikelihoodEstimate;              
+            logLH_Model(kk, 6) = logLikelihoodEstimate;              
         end
         logLH_AllModel(nn, :, bb) = nansum(logLH_Model, 1);
     end
@@ -710,16 +794,16 @@ toc
 
 %% Plot the -LLH
 % Normalize the logLH by data (upper bound) and Flip estimate (lower bound)
-logLH_DataRep = repmat(logLH_Data, 1, 1, 5);
+logLH_DataRep = repmat(logLH_Data, 1, 1, size(logLH_AllModel, 2));
 logLH_DataRep = permute(logLH_DataRep, [1 3 2]);
-lowerBound = repmat(logLH_AllModel(:, 1, :), 1, 5, 1);
+lowerBound = repmat(logLH_AllModel(:, 1, :), 1, size(logLH_AllModel, 2), 1);
 logLH_ModelNorm = (logLH_AllModel - lowerBound) ./ (logLH_DataRep - lowerBound);
 
 meanLogLH = squeeze(logLH_ModelNorm(:, 2:end, end));
-lowerConfLogLH = NaN(length(subjectIDAll), 4);
-upperConfLogLH = NaN(length(subjectIDAll), 4);
+lowerConfLogLH = NaN(length(subjectIDAll), size(logLH_AllModel, 2)-1);
+upperConfLogLH = NaN(length(subjectIDAll), size(logLH_AllModel, 2)-1);
 for ii = 1 : length(subjectIDAll)
-    for jj = 1:4
+    for jj = 1:size(logLH_AllModel, 2)-1
         tempLLH = squeeze(logLH_ModelNorm(ii, jj+1, :));
         tempLLH(isnan(tempLLH)) = [];
         confInterval= prctile(tempLLH(1:end-1),[2.5 97.5]);
@@ -730,7 +814,7 @@ end
 
 maxY = 1;
 minY = min(lowerConfLogLH(:)) - 0.01;
-colorName = {'DarkOrange', 'Teal', 'DodgerBlue','Purple', 'Red'};
+colorName = {'DarkOrange', 'Teal', 'Green', 'DodgerBlue', 'Red'};
 colorIndex = NaN(length(colorName), 3);
 for ii = 1 : length(colorName)
     colorIndex(ii, :) = rgb(colorName{ii});
