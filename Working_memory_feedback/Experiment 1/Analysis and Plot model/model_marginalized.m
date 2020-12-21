@@ -846,8 +846,9 @@ for kk=1:length(stdSensory)
         pthhGthChccw(:, thetaStim < 0) = 0;   
     elseif incorrectType == 11
         % Scale the LH width by KL divergence
-        scale_factor = PCGm(2,:).*log2(PCGm(2,:)./PCGm(1,:)) + PCGm(1,:).*log2(PCGm(1,:)./PCGm(2,:));
-        stdSensory_scale = (1+ scale_factor) * stdSensory(kk);
+        log_base = 3;        
+        scale_factor = PCGm(2,:).*(log2(PCGm(2,:)./PCGm(1,:)) / log2(log_base)) + PCGm(1,:).*(log2(PCGm(1,:)./PCGm(2,:)) / log2(log_base));
+        stdSensory_scale = sqrt(1+ scale_factor) * stdSensory(kk);
         pmGth = exp(-((M-THm).^2)./(2*stdSensory_scale.^2)');
     
         pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
