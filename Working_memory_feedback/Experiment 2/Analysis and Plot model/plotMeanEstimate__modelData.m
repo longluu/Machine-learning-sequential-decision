@@ -29,14 +29,23 @@ ciCCW_Data = NaN(length(subjectIDAll), 2, 2);
 %                     9.7284   15.1847           0.0000     56.3034   -42.2707   0.4378    4.0136    0.9881    0.5523;
 %                     7.8510    9.8641           0.0000     22.8922   -18.0641   0.8543    3.9069    0.9646    0.4949];
 
-% Resample for correct trials                
-paramsAllSubject = [5.1714    6.5149           0.0000     18.2531    -9.3607   0.9940    2.0902    0.9978    0.6635;
-                    8.5063    8.7485           0.0000     33.2603   -21.0845   0.6393    1.8928    0.9098    0.4518;
-                    8.7284    8.9988           0.0000     13.8798   -12.3746   0.6037    2.7094    0.9189    0.5136;
-                    6.1961    8.3406           0.0000     19.5003   -12.7209   0.7809    2.6041    0.4987    0.4168;
-                    5.1595    8.9406           0.0000     32.3917   -17.5501   5.2297    1.5830    0.3252    0.3550;
-                    10.0963   15.0721           0.0000     57.4518   -39.0410   0.0101    4.0136    0.4339    0.5875;
-                    7.7473    9.7957           0.0000     23.1824   -18.2993   0.6654    3.9069    0.8918    0.4908];
+% No resample for correct trials (fit relapse)               
+paramsAllSubject = [2.5841    4.6918           0.0327     19.1233    -9.9073   5.5023    2.0902    0.9984    0.7464;
+                    8.6334    8.8191           0.0043     33.0647   -21.3477   0.8755    1.8928    0.9127    0.4313;
+                    7.4646    7.8156           0.0241     13.6883   -12.2943   1.0845    2.7094    0.8384    0.5343;
+                    5.8649    8.0372           0.0075     19.2718   -12.7879   0.7122    2.6041    0.4691    0.4097;
+                    6.2094    9.8275           0.0010     32.6800   -17.6770   3.9740    1.5830    0.1959    0.4021;
+                    9.4508   14.9103           0.0007     58.8196   -39.8226   0.1698    4.0136    0.2880    0.5929;
+                    6.8495    9.2325           0.0127     22.7921   -18.3783   1.0853    3.9069    0.8675    0.5019];
+
+% % Resample for correct trials                
+% paramsAllSubject = [5.1714    6.5149           0.0000     18.2531    -9.3607   0.9940    2.0902    0.9978    0.6635;
+%                     8.5063    8.7485           0.0000     33.2603   -21.0845   0.6393    1.8928    0.9098    0.4518;
+%                     8.7284    8.9988           0.0000     13.8798   -12.3746   0.6037    2.7094    0.9189    0.5136;
+%                     6.1961    8.3406           0.0000     19.5003   -12.7209   0.7809    2.6041    0.4987    0.4168;
+%                     5.1595    8.9406           0.0000     32.3917   -17.5501   5.2297    1.5830    0.3252    0.3550;
+%                     10.0963   15.0721           0.0000     57.4518   -39.0410   0.0101    4.0136    0.4339    0.5875;
+%                     7.7473    9.7957           0.0000     23.1824   -18.2993   0.6654    3.9069    0.8918    0.4908];
                 
 for nn = 1 : length(subjectIDAll)
     subjectID = subjectIDAll{nn};
@@ -520,11 +529,12 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance only
         % Compute the estimate
-        pthhGthChcw = repmat(normpdf(th', -stdSensory(kk), stdMotor), 1, length(thetaStim));
+        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+        pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
         pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
-        pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
            

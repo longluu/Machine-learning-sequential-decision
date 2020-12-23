@@ -590,11 +590,12 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance only
         % Compute the estimate
-        pthhGthChcw = repmat(normpdf(th', -stdSensory(kk), stdMotor), 1, length(thetaStim));
+        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+        pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
         pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
-        pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
            

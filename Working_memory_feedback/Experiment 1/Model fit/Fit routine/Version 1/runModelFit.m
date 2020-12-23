@@ -26,12 +26,12 @@ initialValueAll = [5.1033   10.3703           0.0000     30     3   0.8187    3.
 binnedLH = 0;
 plotFitProgress = 0;
 plotEstFit = 0;
-subjectID = {'average'};
+subjectID = {'ll'; 'an'; 'ep'; 'jp'; 'kc'};
 expNumber = 1;
 includeIncongruentTrials = 0; 
 correctTrialOnly = 1; 
 fixMotorNoise = 1;
-fixLapseRate = 1;
+fixLapseRate = 0;
 fixBoundaryCutoff = 1;
 
 for ll = 1 : length(subjectID)

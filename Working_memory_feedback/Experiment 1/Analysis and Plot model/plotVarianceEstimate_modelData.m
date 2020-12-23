@@ -11,20 +11,12 @@ estimate_Prior = NaN(length(subjectIDAll), 2, 8);
 estimate_Data = NaN(length(subjectIDAll), 2, 8);
 std_memory_increase = 2;
 
-% % No resample for correct trials
-% paramsAllSubject = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
-%                     3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
-%                     4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
-%                     7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
-%                     5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
-
-% Resample for correct trials
-paramsAllSubject = [2.7354    6.1605           0.0000     21.7403     1.5041   0.9972    2.0976;
-                    2.7818    9.6676           0.0000     34.4606     0.1772   0.9475    3.1069;
-                    3.9181   10.3898           0.0000     29.4658     1.1074   0.9985    3.8106;
-                    7.8828   12.2344           0.0000     54.5629     0.1530   0.6860    3.8551;
-                    4.2004    9.4129           0.0000     46.4438     6.0270   0.8464    3.3313;
-                    5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234];
+% % No resample for correct trials (fit lapse)
+paramsAllSubject = [2.5723    6.1610           0.0006     21.8383     1.9938   0.9996    2.0976;
+                    2.7246    9.7063           0.0014     34.5490     0.0585   0.9340    3.1069;
+                    3.9397   10.3896           0.0052     30.4242     0.3831   0.9913    3.8106;
+                    7.6409   11.7697           0.0121     58.7682     0.0304   0.3595    3.8551;
+                    5.1069   10.3539           0.0000     45.1349     4.8105   0.8796    3.3313];
 
 for nn = 1 : length(subjectIDAll)
     subjectID = subjectIDAll{nn};
@@ -252,8 +244,8 @@ for nn = 1 : length(subjectIDAll)
         pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChccw(pthhGthChccw < 0) = 0; 
 
-        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
-        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+        pthhGthChcw_correct = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+        pthhGthChccw_correct = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
         if includeIncongruentTrials == 0
             % modify psychometric curve p(Chat|theta, Congruent) ~ p(Congruent| Chat, theta) * p(Chat|Theta)
@@ -263,8 +255,8 @@ for nn = 1 : length(subjectIDAll)
             PChGtheta_lapse_new = PChGtheta_lapse_new ./ repmat(sum(PChGtheta_lapse_new, 1), 2, 1);
 
             % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-            pthhGthChccw(th'>= 0, :) = 0;
-            pthhGthChcw(th'< 0, :) = 0;
+            pthhGthChccw_correct(th'>= 0, :) = 0;
+            pthhGthChcw_correct(th'< 0, :) = 0;
         else
             PChGtheta_lapse_new = PChGtheta_lapse;
         end
@@ -283,6 +275,7 @@ for nn = 1 : length(subjectIDAll)
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;        
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));
@@ -295,7 +288,8 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance model
         % Compute the estimate
-        pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+        pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
            
@@ -306,6 +300,7 @@ for nn = 1 : length(subjectIDAll)
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;        
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));
@@ -344,20 +339,6 @@ for nn = 1 : length(subjectIDAll)
             indKeepCcw(indDiscardCcw) = [];
         end
 
-        a = 1./gradient(EthChcw,dstep);
-        % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
-        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
-
-        % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
-        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
-
-        pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
-        % add motor noise
-        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
-        pthhGthChcw(pthhGthChcw < 0) = 0; 
-
         a = 1./gradient(EthChccw,dstep);
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
         pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
@@ -366,17 +347,16 @@ for nn = 1 : length(subjectIDAll)
         % add motor noise
         pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChccw(pthhGthChccw < 0) = 0; 
-        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
         if includeIncongruentTrials == 0
             % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
             pthhGthChccw(th'<= 0, :) = 0;
-            pthhGthChcw(th'> 0, :) = 0;
         end
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;                
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));
@@ -415,20 +395,6 @@ for nn = 1 : length(subjectIDAll)
             indKeepCcw(indDiscardCcw) = [];
         end
 
-        a = 1./gradient(EthChcw,dstep);
-        % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemoryIncorrect^2)); 
-        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
-
-        % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
-        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
-
-        pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
-        % add motor noise
-        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
-        pthhGthChcw(pthhGthChcw < 0) = 0; 
-
         a = 1./gradient(EthChccw,dstep);
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
         pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
@@ -448,6 +414,7 @@ for nn = 1 : length(subjectIDAll)
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;                
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));
@@ -536,6 +503,7 @@ for nn = 1 : length(subjectIDAll)
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0;
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;                
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));
@@ -589,6 +557,7 @@ for nn = 1 : length(subjectIDAll)
 
         % remove 'correct' trials
         pthhGthChccw(:, thetaStim < 0) = 0; 
+        pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;                
         pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);          
         mthhGthChccw= th * pthhGthChccw_norm;
         std_thhGthChccw = NaN(1, length(mthhGthChccw));

@@ -44,21 +44,12 @@ for kk = 1 : length(subjID)
     end
 end
 
-% % No resample for correct trials
-% paramModel =       [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
-%                     3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
-%                     4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
-%                     7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
-%                     5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313;
-%                     5.2200   9.5650            0          48.1703     0.0548   0.9768    3.3234];
-
-% Resample for correct trials
-paramModel =        [2.7354    6.1605           0.0000     21.7403     1.5041   0.9972    2.0976;
-                    2.7818    9.6676           0.0000     34.4606     0.1772   0.9475    3.1069;
-                    3.9181   10.3898           0.0000     29.4658     1.1074   0.9985    3.8106;
-                    7.8828   12.2344           0.0000     54.5629     0.1530   0.6860    3.8551;
-                    4.2004    9.4129           0.0000     46.4438     6.0270   0.8464    3.3313;
-                    5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234];
+% No resample for correct trials (fit lapse)
+paramModel = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
+                    3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
+                    4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
+                    7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
+                    5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
 
 noiseSensoryExp1 = paramModel(:, 1:2);
 noiseMemoryExp1 = paramModel(:, 5);
@@ -99,9 +90,9 @@ for nn = 1 : length(subjID)
     subjectID = subjID{nn};
     
     paramSubj = [paramsBootstrap{nn}; paramsFit(nn, :)];
-    for bb = 1 : maxIter+1 % run only the last iteration for no-bootstrap plot
+    for bb = maxIter+1 : maxIter+1
         %% LLH of oracle model
-        [~, ~, ~, estimateData, angleDiff, ~] = dataForBootstrap(subjectID, 0, 0);
+        [~, ~, ~, estimateData, angleDiff, ~] = dataForFitting(subjectID, 0, 0);
         logLH = 0;
         binCenter = linspace(-30, 30, numBin);
         deltaBin = diff(binCenter(1:2));
@@ -266,8 +257,10 @@ for nn = 1 : length(subjID)
             pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
             pthhGthChccw(pthhGthChccw < 0) = 0; 
 
-            pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
-            pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
+            pthhGthChcw_correct = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
+            pthhGthChcw_correct = pthhGthChcw_correct  .* repmat(PChGtheta_lapse(2,:),nth,1);
+            pthhGthChccw_correct = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
+            pthhGthChccw_correct = pthhGthChccw_correct  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
             if includeIncongruentTrials == 0
                 % modify psychometric curve p(Chat|theta, Congruent) ~ p(Congruent| Chat, theta) * p(Chat|Theta)
@@ -277,23 +270,14 @@ for nn = 1 : length(subjID)
                 PChGtheta_lapse_new = PChGtheta_lapse_new ./ repmat(sum(PChGtheta_lapse_new, 1), 2, 1);
 
                 % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'>= 0, :) = 0;
-                pthhGthChcw(th'< 0, :) = 0;
+                pthhGthChccw_correct(th'>= 0, :) = 0;
+                pthhGthChcw_correct(th'< 0, :) = 0;
             else
                 PChGtheta_lapse_new = PChGtheta_lapse;
             end
-
-            pthhGthChcw_Incorrect = pthhGthChcw;
-            pthhGthChccw_Incorrect = pthhGthChccw;
-
-            % remove correct trials
-            pthhGthChcw_Incorrect(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw_Incorrect(:, thetaStim < 0) = 0;
-
-            % flip the estimate
-            pthhGthChcw_Incorrect = flipud(pthhGthChcw_Incorrect);
-            pthhGthChccw_Incorrect = flipud(pthhGthChccw_Incorrect);
-
+            pthhGthChccw_correct(:, thetaStim > 0) = 0;
+            pthhGthChcw_correct(:, thetaStim < 0) = 0; 
+            
             %% Model Prior only
             pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
@@ -303,7 +287,6 @@ for nn = 1 : length(subjID)
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
             pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
 
-
             if includeIncongruentTrials == 0
                 % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
                 pthhGthChccw(th'<= 0, :) = 0;
@@ -311,8 +294,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
             pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct;            
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
@@ -339,11 +324,12 @@ for nn = 1 : length(subjID)
             logLH_Model(kk, 1) = logLikelihoodEstimate; 
 
             %% Model Variance only
-            pthhGthChcw = repmat(normpdf(th', -stdSensory(kk), stdMotor), 1, length(thetaStim));
+            std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+            pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
             pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
 
-            pthhGthChccw = repmat(normpdf(th', stdSensory(kk), stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+            pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
             pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
 
@@ -355,8 +341,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
             pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct; 
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
@@ -381,7 +369,7 @@ for nn = 1 : length(subjID)
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
             logLH_Model(kk, 2) = logLikelihoodEstimate; 
-            
+
             %% Model Flip decision
             pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
             pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
@@ -442,8 +430,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
+            pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct; 
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
@@ -468,6 +458,7 @@ for nn = 1 : length(subjID)
                 logLikelihoodEstimate = logLikelihoodEstimate + nansum(binCount .* log(pBin));             
             end
             logLH_Model(kk, 3) = logLikelihoodEstimate;
+
 
             %% Model Flip decision + more memory noise
             pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + (2*2*stdMemory)^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -529,8 +520,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
+            pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct; 
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
@@ -634,8 +627,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
-            pthhGthChccw(:, thetaStim < 0) = 0;   
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
+            pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct; 
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
@@ -736,8 +731,10 @@ for nn = 1 : length(subjID)
             end
 
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw(:, thetaStim < 0) = 0;        
+            pthhGthChcw(:, thetaStim > 0) = 0; 
+            pthhGthChcw = (1-lapseRate) * pthhGthChcw + lapseRate * pthhGthChccw_correct;
+            pthhGthChccw(:, thetaStim < 0) = 0;  
+            pthhGthChccw = (1-lapseRate) * pthhGthChccw + lapseRate * pthhGthChcw_correct; 
             pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
             pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);  
             pthhGthChcw_norm(isnan(pthhGthChcw_norm)) = 0;    
