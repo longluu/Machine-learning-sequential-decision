@@ -1,4 +1,4 @@
-function [fitParameter, negLogLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw)
+function [fitParameter, negLogLH] = modelFitBayes_MmSampleFromTheta(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw)
 %%%%%%%%%%%% Fitting Bayesian model to data (Condition prior only) %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
@@ -332,11 +332,8 @@ try
 
         a = 1./gradient(EthChcw,dstep);
         % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
-        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
-
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        pmmGthChcw = pmmGth(:, ismember(th, thetaStim));
         b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
         pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
         pthhGthChcw(pthhGthChcw < 0) = 0; 
@@ -346,7 +343,7 @@ try
 
         a = 1./gradient(EthChccw,dstep);
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        pmmGthChccw = pmmGthChcw;        
         b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
         pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
         pthhGthChccw(pthhGthChccw < 0) = 0; 

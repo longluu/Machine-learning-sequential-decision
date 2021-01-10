@@ -18,7 +18,7 @@ negLLH = NaN(nLoops, 1);
 % Use binned or unbinned likelihood: 0: unbinned
 %                                    1: binned
 modelType = 1;
-useResampling = 0; % only for self-consistent Bayes
+noiseModel_correctTrial = 3; % only for self-consistent Bayes
 optimizationAlgorithm = 1;
 SetStartPoint = 0;
 initialValueAll = [4.3425    6.2248           0.0000     19.1377    -9.6045   3.5283    2.0902    0.9927    0.6813;
@@ -39,7 +39,7 @@ expNumber = 1;
 includeIncongruentTrials = 0; 
 correctTrialOnly = 1; 
 fixMotorNoise = 1;
-fixLapseRate = 0;
+fixLapseRate = 1;
 fixSmoothPrior = 0;
 fixPcw = 0;
 
@@ -69,10 +69,12 @@ for ll = 1 : length(subjectID)
                     'stdNoiseLevel', 'LapseRate', 'Prior range', 'MemNoise', 'MotorNoise', 'SmoothPrior', 'pCW');
     counter = 1;
     for kk = 1 : nLoops
-        if useResampling == 0        
+        if noiseModel_correctTrial == 1        
             [tempFitParameter, tempNegLLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);
-        else
+        elseif noiseModel_correctTrial == 2
             [tempFitParameter, tempNegLLH] = modelFitBayes_Resample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);            
+        elseif noiseModel_correctTrial == 3
+            [tempFitParameter, tempNegLLH] = modelFitBayes_MmSampleFromTheta(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, '', fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw);            
         end
         fitParameterAll{kk} = tempFitParameter;
         negLLH(kk) = tempNegLLH;

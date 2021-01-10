@@ -1,5 +1,6 @@
-function [fitParameter, negLogLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixSmoothPrior, fixPcw)
-%%%%%%%%%%%% Fitting Bayesian model to data (Condition prior only) %%%%%%%%%%%%
+function [fitParameter, negLogLH] = modelFitBayes_MmSampleFromTheta(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff)
+%%%%%%%%%%%% Fitting Bayesian model to data
+%%%%%%%%%%%% Condition the PRIOR only
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %
@@ -27,50 +28,42 @@ if fixMotorNoise
     minStdMotor = stdMotor;
     maxStdMotor = stdMotor;
 else
-    minStdMotor = 0.1;
+    minStdMotor = 0.01;
     maxStdMotor = 20;
 end
-minStdMemory = 0.01;
+minStdMemory = 0.005;
 maxStdMemory = 20;
 maxLapse = 0.2;
-maxSmoothPrior = 1;
-minPcw = 0.1;
-maxPcw = 0.9;
 
 if fixLapseRate
     maxLapse = 0;
 end
 
-if fixSmoothPrior
-    maxSmoothPrior = 0;
-end
-
-if fixPcw
-    minPcw = 0.5;
-    maxPcw = 0.5;
+if fixBoundaryCutoff
+    maxBoundaryCutoff = 0;
 end
 
 A_Inequality = [1 -1 zeros(1,5) 0;0 1 -1 zeros(1,4) 0];
 b_Inequality = [0; 0];
-vlb = [minStd minStd  0            5  -40 minStdMemory  minStdMotor  0               minPcw];
-vub = [maxStd maxStd  maxLapse     60  -2  maxStdMemory  maxStdMotor  maxSmoothPrior  maxPcw];
+vlb = [minStd minStd  0            10  minStdMemory 1e-2 minStdMotor 0];
+vub = [maxStd maxStd  maxLapse     60  maxStdMemory 1   maxStdMotor  maxBoundaryCutoff];
 if SetStartPoint
     searchParameter0 = initialValue;
 else
     stdSensoryInitial = initialValue(1:2) + 5*(rand(1,2)-0.5);
     lapseRateInitial =  initialValue(3) + 0.01*(rand-0.5);
-    priorRangeInitial = initialValue(4:5) + 8*(rand-0.5);
-    stdMemoryInitial = initialValue(6) + 4*(rand-0.5); %  + 4*(rand-0.5)
+    priorRangeInitial = initialValue(4) + 8*(rand-0.5);
+    stdMemoryInitial = initialValue(5) + 4*(rand-0.5);
+    smoothFactorInitial = rand; %(vub(end) -vlb(end)) * rand + vlb(end);
     stdMotorInitial = initialValue(7) + 5*(rand-0.5);
-    smoothPriorInitial = rand;
-    pCWInitial = 0.5 + 0.2*(rand-0.5);
-    searchParameter0 = [stdSensoryInitial lapseRateInitial priorRangeInitial stdMemoryInitial  stdMotorInitial smoothPriorInitial pCWInitial];
+    boundaryCutoffInitial = 2*rand;
+    searchParameter0 = [stdSensoryInitial lapseRateInitial priorRangeInitial stdMemoryInitial smoothFactorInitial stdMotorInitial boundaryCutoffInitial];
 end
 
 %% Run the optimization
 % Define the objective function
 optimFun = @(searchParameter, varargin) computeNegLLH(searchParameter(1:2),searchParameter(3),...
-     searchParameter(4:5), searchParameter(6), searchParameter(7), searchParameter(8), searchParameter(9), angleDiff, percentCW, ...
+     searchParameter(4), searchParameter(5), searchParameter(6), searchParameter(7), searchParameter(8), angleDiff, percentCW, ...
     nTrialsPerCondition, estimateData, fileID, expNumber, plotFitProgress, modelType, includeIncongruentTrials);
 switch optimizationAlgorithm
     case 1
@@ -125,16 +118,16 @@ end
 % end
 end
 
-function errorTotal = computeNegLLH(stdSensory, lapseRate, priorRange, stdMemory, stdMotor, smoothPrior, pCw, angleDiff,...
+function errorTotal = computeNegLLH(stdSensory, lapseRate, priorRange, stdMemory, smoothFactor, stdMotor, boundaryCutoff, angleDiff,...
                             percentCW, nTrials, estimateData, fileID, expNumber, plotFitProgress, modelType, includeIncongruentTrials)
 global hOptim
 global negLLH
 
 try
     %% Compute the full model prediction for both tasks
-    pC = [pCw 1-pCw]';
+    pC = [0.5 0.5]';
     [predictedFractionCW, estimateModel] = fullBayesian(stdSensory, stdMemory, priorRange,...
-             smoothPrior, pC, expNumber, angleDiff, stdMotor, modelType, lapseRate, includeIncongruentTrials);    
+            smoothFactor, boundaryCutoff, pC, expNumber, angleDiff, stdMotor, modelType, lapseRate, includeIncongruentTrials);    
     
     %% Error term for discrimination task
     epsZero = 10^(-10);
@@ -156,6 +149,7 @@ try
     tempEstimateModelX = estimateModel.Xval{1};
     for ii = 1 : length(estimateModel.Yval)
         estimateModelY = estimateModel.Yval{ii};
+        estimateModelY = estimateModelY(:, angleDiff >=0);
         for jj = 1 : size(estimateModelY,2)            
             tempEstimateModelY = estimateModelY(:, jj); 
             tempEstimateModelY = tempEstimateModelY ./ trapz(tempEstimateModelX, tempEstimateModelY);
@@ -163,7 +157,7 @@ try
             tempestimateDataX(tempestimateDataX < min(tempEstimateModelX)) = min(tempEstimateModelX);
             tempestimateDataX(tempestimateDataX > max(tempEstimateModelX)) = max(tempEstimateModelX);               
             tempLikelihood = interp1(tempEstimateModelX, tempEstimateModelY, tempestimateDataX, 'pchip');
-            tempLikelihood(tempLikelihood < epsZero) = epsZero; 
+            tempLikelihood(tempLikelihood == 0) = epsZero; 
             tempLikelihood(isnan(tempLikelihood)) = [];            
             logLikelihoodEstimate = logLikelihoodEstimate + nansum(log(tempLikelihood)); 
             if logLikelihoodEstimate>0
@@ -171,42 +165,11 @@ try
             end                
         end
     end
-
-%     binCenter = linspace(-70, 70, 17);
-%     deltaModelX = diff(tempEstimateModelX(1:2));
-%     for ii = 1 : length(estimateModel.Yval)
-%         estimateModelY = estimateModel.Yval{ii};
-%         for jj = 1 : size(estimateModelY,2)            
-%             tempEstimateModelY = estimateModelY(:, jj); 
-%             tempEstimateModelY = tempEstimateModelY ./ trapz(tempEstimateModelX, tempEstimateModelY);        
-% 
-%             % Bin the data
-%             tempestimateDataX = estimateData{ii,jj};      
-%             binCount = hist(tempestimateDataX, binCenter);
-%             binEdge = binCenter + diff(binCenter(1:2))/2;
-%             binEdge = [min(tempEstimateModelX) binEdge];
-%             binEdge(end) = max(tempEstimateModelX);
-% 
-%             % Bin the model
-%             estimateModelY_binned = NaN(1, length(binEdge)-1);
-%             for kk = 1 : length(binEdge)-1
-%                 indSelect = tempEstimateModelX >= binEdge(kk) & tempEstimateModelX < binEdge(kk+1);
-%                 estimateModelY_binned(kk) = sum(tempEstimateModelY(indSelect)) * deltaModelX;
-%             end
-%             
-%             estimateModelY_binned(estimateModelY_binned < epsZero) = epsZero; 
-%             logLikelihoodEstimate = logLikelihoodEstimate + log(estimateModelY_binned) * binCount'; 
-%             if logLikelihoodEstimate>0
-%                 keyboard
-%             end                
-%         end
-%     end
-    
     errorTotal = -logLikelihoodDiscriminate - logLikelihoodEstimate;
     disp(['-logLH:' num2str(round(errorTotal)) ' ' num2str(round(-logLikelihoodDiscriminate)) ...
-            ' ' num2str(round(-logLikelihoodEstimate)) ', Params: ' num2str([roundn(stdSensory, -2) roundn(lapseRate, -4) roundn([priorRange stdMemory  stdMotor smoothPrior pCw],-2)])])
-    fprintf(fileID,'%2s %9.1f %8.1f %9.1f %9.4f %9.4f  %16.4f  %10.4f %10.4f %8.4f %9.4f %8.4f %8.4f \r\n', '//', errorTotal, -logLikelihoodDiscriminate,...
-        -logLikelihoodEstimate, stdSensory(1), stdSensory(2), lapseRate, priorRange(1), priorRange(2), stdMemory, stdMotor, smoothPrior, pCw);
+            ' ' num2str(round(-logLikelihoodEstimate)) ', Params: ' num2str([roundn(stdSensory, -2) roundn(lapseRate, -4) roundn([priorRange stdMemory smoothFactor stdMotor boundaryCutoff],-2)])])
+    fprintf(fileID,'%2s %9.1f %8.1f %9.1f %9.4f %9.4f  %16.4f  %10.4f %10.4f %8.4f %9.4f %8.4f \r\n', '//', errorTotal, -logLikelihoodDiscriminate,...
+        -logLikelihoodEstimate, stdSensory(1), stdSensory(2), lapseRate, priorRange, stdMemory, smoothFactor, stdMotor, boundaryCutoff);
     
     %% Plot the optimization progress
     if plotFitProgress
@@ -233,14 +196,14 @@ end
 end
 
 
-function [pCGthetaAll, estimateModel] = fullBayesian(stdSensory, stdMemory, priorRange, smoothPrior, pC, ~, thetaStim, stdMotor, modelType, lapseRate, includeIncongruentTrials)
+function [pCGthetaAll, estimateModel] = fullBayesian(stdSensory, stdMemory, priorRange, smoothFactor, boundaryCutoff, pC, ~, thetaStim, stdMotor, modelType, lapseRate, includeIncongruentTrials)
 try
     estimateModel.Xval = cell(1, length(stdSensory));
     estimateModel.Yval = cell(1, length(stdSensory)); 
     pCGthetaAll = NaN(length(stdSensory), length(thetaStim));
     
-    pthcw = priorRange(1);
-    pthccw = priorRange(2);
+    pthcw = priorRange;
+    pthccw = -priorRange;
 
     dstep = 0.1;
     rangeth = [-65 65];
@@ -250,10 +213,10 @@ try
     pthGC = zeros(2,nth);
 
     if modelType == 1
-        pthGC(1,:) = TukeyWindowNew([0 pthcw], smoothPrior, th, 0);
-        pthGC(2,:) = TukeyWindowNew([pthccw 0], smoothPrior, th, 0);
+        pthGC(1,:) = TukeyWindowNew([0 pthcw], smoothFactor, th, boundaryCutoff);
+        pthGC(2,:) = TukeyWindowNew([pthccw 0], smoothFactor, th, boundaryCutoff);
     elseif modelType == 2
-        pth = (TukeyWindow([0 pthcw], 0, smoothPrior, th) + TukeyWindow([pthccw 0], 1, smoothPrior, th))/2;
+        pth = (TukeyWindow([0 pthcw], 0, smoothFactor, th) + TukeyWindow([pthccw 0], 1, smoothFactor, th))/2;
         pth(th==0) = 0;
         pth(th==0) = max(pth);
         pthGC(1,:) = pth;
@@ -332,24 +295,19 @@ try
 
         a = 1./gradient(EthChcw,dstep);
         % memory noise
-        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
-        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
-
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        pmmGthChcw = pmmGth(:, ismember(th, thetaStim));
         b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
         pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
-        pthhGthChcw(pthhGthChcw < 0) = 0; 
         % add motor noise
         pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChcw(pthhGthChcw < 0) = 0; 
 
         a = 1./gradient(EthChccw,dstep);
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        pmmGthChccw = pmmGthChcw;        
         b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
         pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
-        pthhGthChccw(pthhGthChccw < 0) = 0; 
         % add motor noise
         pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
         pthhGthChccw(pthhGthChccw < 0) = 0; 

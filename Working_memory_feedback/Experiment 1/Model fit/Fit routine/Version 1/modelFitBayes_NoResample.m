@@ -1,4 +1,4 @@
-function [fitParameter, negLogLH] = modelFitBayes_01(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff)
+function [fitParameter, negLogLH] = modelFitBayes_NoResample(optimizationAlgorithm, SetStartPoint, initialValue, fileID, expNumber, plotFitProgress, modelType, dataName, fixMotorNoise, includeIncongruentTrials, fixLapseRate, fixBoundaryCutoff)
 %%%%%%%%%%%% Fitting Bayesian model to data
 %%%%%%%%%%%% Condition the PRIOR only
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
