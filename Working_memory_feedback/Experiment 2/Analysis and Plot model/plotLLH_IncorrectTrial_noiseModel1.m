@@ -789,6 +789,10 @@ for nn = 1 : length(subjectIDAll)
 end
 toc
 
+% Save LLH (for comparison with Flip Decision of the new noise model)
+llh_resample = logLH_AllModel(:, 5, end);
+save('llh_resample.mat', 'llh_resample')
+
 %% Plot the -LLH
 % Normalize the logLH by data (upper bound) and Flip estimate (lower bound)
 logLH_DataRep = repmat(logLH_Data, 1, 1, size(logLH_AllModel, 2));

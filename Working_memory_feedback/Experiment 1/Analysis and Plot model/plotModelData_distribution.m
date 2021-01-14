@@ -1,6 +1,6 @@
 %%%% Plot the model along with subjects' data
 %% Set condition
-subjectID = {'average'};
+subjectID = {'kc'};
 experimentNumber = 1;
 experimentType = 'MainExperiment';
 experiment = 'Original';
@@ -18,6 +18,7 @@ includeIncongruentTrials = 0;
 
 correctType = 2; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
+                 % 3: new noise model (m_m sampled from theta)
 incorrectType = 4; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample (center: memory, variance: sensory + memory)
@@ -28,7 +29,9 @@ flagSC = 1; % 1: Self-conditioned
 if correctType == 1
     paramsFit = [5.2200   9.5650            0          48.1703     0.0548   0.9768    3.3234	   0]; % no resample
 elseif correctType == 2
-    paramsFit = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000]; % resample    
+    paramsFit = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000]; % resample   
+elseif correctType == 3
+    paramsFit = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000]; % resample       
 end
 stdSensory = paramsFit(1:2);
 priorRange = paramsFit(4);
@@ -342,7 +345,55 @@ for kk=1:length(stdSensory)
         pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
         % add motor noise
         pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
-        pthhGthChccw(pthhGthChccw < 0) = 0;         
+        pthhGthChccw(pthhGthChccw < 0) = 0;    
+    elseif correctType == 3
+        pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
+        pmmGth = pmmGth./(repmat(sum(pmmGth,1),nmm,1)); 
+        pthGmmChcw = (pmmGth.*repmat(pthGC(1,:),nmm,1))';
+        pthGmmChcw = pthGmmChcw./repmat(sum(pthGmmChcw,1),nth,1);
+        pthGmmChcw(isnan(pthGmmChcw)) = 0;
+
+        pthGmmChccw = (pmmGth.*repmat(pthGC(2,:),nmm,1))';
+        pthGmmChccw = pthGmmChccw./repmat(sum(pthGmmChccw,1),nth,1);
+        pthGmmChccw(isnan(pthGmmChccw)) = 0;
+
+        EthChcw = th * pthGmmChcw;
+        EthChccw = th * pthGmmChccw;
+        % discard repeating/decreasing values (required for interpolation) 
+        indKeepCw = 1:length(EthChcw);
+        while sum(diff(EthChcw)<=0) >0
+            indDiscardCw = [false diff(EthChcw)<=0];
+            EthChcw(indDiscardCw) = [];
+            indKeepCw(indDiscardCw) = [];
+        end
+        indKeepCcw = 1:length(EthChccw);
+        while sum(diff(EthChccw)<=0) >0
+            indDiscardCcw = [diff(EthChccw)<=0 false];
+            EthChccw(indDiscardCcw) = [];
+            indKeepCcw(indDiscardCcw) = [];
+        end
+
+        a = 1./gradient(EthChcw,dstep);
+        % memory noise
+        pmmGm = exp(-((MM_m-repmat(m, nmm, 1)).^2)./(2*stdMemory^2)); 
+        pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
+
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChcw = pmmGth(:, ismember(th, thetaStim));
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
+        pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChcw = conv2(pthhGthChcw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChcw(pthhGthChcw < 0) = 0; 
+
+        a = 1./gradient(EthChccw,dstep);
+        % attention marginalization: compute distribution only over those ms that lead to cw decision!
+        pmmGthChccw = pmmGthChcw;        
+        b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
+        pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
+        % add motor noise
+        pthhGthChccw = conv2(pthhGthChccw,pdf('norm',th,0,stdMotor)','same');
+        pthhGthChccw(pthhGthChccw < 0) = 0;             
     end
     
     pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    

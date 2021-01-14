@@ -6,7 +6,7 @@ includeIncongruentTrials = 0;
 correctType = 3; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
                  % 3: no resampling, noise model, m_m sampled from N(theta, sigma_combined)
-incorrectType = 11; % 1: flip the decision bit
+incorrectType = 1; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample mm, centered on mm, variance: sensory+memory
                    % 4: resample m, centered on m, variance: sensory+memory
@@ -369,7 +369,11 @@ for kk=1:length(stdSensory)
         pmmGm = pmmGm./(repmat(sum(pmmGm,1),nmm,1));   
 
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        if correctType == 3
+            pmmGthChcw = pmmGth(:, ismember(th, thetaStim));
+        else
+            pmmGthChcw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(1,:)',1,length(thetaStim)));
+        end
         b = repmat(a',1,length(thetaStim)) .* pmmGthChcw(indKeepCw, :);        
 
         pthhGthChcw = interp1(EthChcw,b,th,'linear','extrap');
@@ -379,7 +383,11 @@ for kk=1:length(stdSensory)
 
         a = 1./gradient(EthChccw,dstep);
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));        
+        if correctType == 3
+            pmmGthChccw = pmmGthChcw;
+        else
+            pmmGthChccw = pmmGm * (pmGth(:, ismember(th, thetaStim)).*repmat(PChGm(2,:)',1,length(thetaStim)));   
+        end
         b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
         pthhGthChccw = interp1(EthChccw,b,th,'linear','extrap');
         % add motor noise
@@ -996,7 +1004,6 @@ for kk=1:length(stdSensory)
     hold on;
     ind = find(PChGtheta_lapse_new(2,:)>pthres);
     plot(thetaStim(ind),mthhGthChccw_correct(ind),'g-','linewidth',2);
-    axis equal
     axis([showrange(1) showrange(2) -40 40]);
     if kk==1
         plot(thetaStim,zeros(1,length(thetaStim)),'k:');
@@ -1022,7 +1029,6 @@ for kk=1:length(stdSensory)
     plot([1 xMax],[round(yMax/2) round(yMax/2)],'k:', 'LineWidth', 1);
     plot([round(xMax/2) round(xMax/2)],[1 yMax],'k:', 'LineWidth', 1);
     plot([1 xMax],[indYStart indYEnd],'b:', 'LineWidth', 1.5);
-    axis equal
     set(gca, 'ylim', [1 yMax], 'xlim', [1 xMax], ...
         'XTick', round(linspace(1,xMax,5)), 'XTickLabel', num2cell([-22 -11 0 11 22]),...
         'YTick', round(linspace(1,yMax,5)), 'YTickLabel', num2cell(round(linspace(yRange(1),yRange(2),5))), ...
@@ -1046,7 +1052,6 @@ for kk=1:length(stdSensory)
     plot([1 xMax],[round(yMax/2) round(yMax/2)],'k:', 'LineWidth', 1);
     plot([round(xMax/2) round(xMax/2)],[1 yMax],'k:', 'LineWidth', 1);
     plot([1 xMax],[indYStart indYEnd],'b:', 'LineWidth', 1.5);
-%     axis equal
     set(gca, 'ylim', [1 yMax], 'xlim', [1 xMax], ...
         'XTick', round(linspace(1,xMax,5)), 'XTickLabel', num2cell([-22 -11 0 11 22]),...
         'YTick', round(linspace(1,yMax,5)), 'YTickLabel', num2cell(round(linspace(yRange(1),yRange(2),5))), ...

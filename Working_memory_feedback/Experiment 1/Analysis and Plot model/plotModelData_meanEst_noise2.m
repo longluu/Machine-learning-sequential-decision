@@ -278,7 +278,7 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance model
         % Compute the estimate
-        std_combined = sqrt(stdSensory(kk)^2 + 0^2);
+        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
         pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
@@ -517,7 +517,7 @@ for nn = 1 : length(subjectIDAll)
 
         a = abs(1./gradient(EthChccw,dstep));
         % attention marginalization: compute distribution only over those ms that lead to cw decision!
-        pthhGthChccw = pmmGth(:, ismember(th, thetaStim));       
+        pmmGthChccw = pmmGth(:, ismember(th, thetaStim));       
         b = repmat(a',1,length(thetaStim)) .* pmmGthChccw(indKeepCcw, :);        
         pthhGthChccw = interp1(EthChccw,b,th,'linear');
         pthhGthChccw(isnan(pthhGthChccw)) = 0;
