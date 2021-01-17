@@ -5,7 +5,7 @@ flagSC = 1; % 1: self-conditioned model
 includeIncongruentTrials = 0;
 correctType = 1; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
-incorrectType = 5; % 1: flip the decision bit
+incorrectType = 11; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample mm, centered on mm, variance: sensory+memory
                    % 4: resample m, centered on m, variance: sensory+memory
@@ -15,9 +15,10 @@ incorrectType = 5; % 1: flip the decision bit
                    % 8: resample m, centered on m, variance: sensory+memory, No rejection on incorrect side
                    % 9: flip likelihood after conditioning p(mm|theta, Chat)
                    % 10: set new likelihood center at the estimate
+                   % 11: estimate the same as sensory uncertainty
                    
 dstep = 0.1;
-paramsAll = [6.0243    8.0650           0.0000     32.4649   -19.9032   5.3989    2.4021    0.9986    0.5303];
+paramsAll = [6.3403    9.9345           0.0000     32.7415   -17.6901   3.8263    1.5830    0.1603    0.4054];
 lapseRate = paramsAll(3);
 
 % stimulus orientation
@@ -846,7 +847,29 @@ for kk=1:length(stdSensory)
 
         % remove 'correct' trials
         pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-        pthhGthChccw(:, thetaStim < 0) = 0;          
+        pthhGthChccw(:, thetaStim < 0) = 0;   
+    elseif incorrectType == 11
+        %% Variance only
+        % Compute the estimate
+        std_combined = sqrt(stdSensory(kk)^2 + 0^2);
+        pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+
+        pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+        pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+           
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+        pthhGthChccw(:, thetaStim < 0) = 0;        
     end
     pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
     pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            

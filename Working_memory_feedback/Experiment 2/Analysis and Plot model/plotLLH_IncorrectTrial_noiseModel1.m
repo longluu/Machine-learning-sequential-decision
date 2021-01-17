@@ -8,10 +8,11 @@ selectInd = [2 3 7 5 6 10];
 lowerCI = NaN(length(subjectIDAll), length(selectInd));
 upperCI = NaN(length(subjectIDAll), length(selectInd));
 paramsBootstrap = cell(1, length(subjectIDAll));
+path_bootstrap = 'C:\Users\longluu\Documents\GitHub\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 2\Model fit\Fit result\Version 2 (free pC)\Bootstrap\Decision and estimate\';
 maxIter = 0;
 subjIter = NaN(1, length(subjectIDAll));
 for kk = 1 : length(subjectIDAll)
-    fileName = ['FitResult-Bootstrap-' subjectIDAll{kk} '-Resample.txt'];
+    fileName = [path_bootstrap 'FitResult-Bootstrap-' subjectIDAll{kk} '.txt'];
     fileID = fopen(fileName);
     paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f %f','CommentStyle','//');
     paramsBootstrap{kk} = cell2mat(paramAll(2:end));
@@ -48,30 +49,18 @@ for kk = 1 : length(subjectIDAll)
 end
 
 % Extract fit parameter
-% nCollapse = 20;
-% paramModel = NaN(length(subjectIDAll), 9);
-% for kk = 1 : length(subjectIDAll)
-%     subjID = subjectIDAll{kk};
-%     fileName = ['FitResult-' subjID '-Resample.txt'];
-%     fileID = fopen(fileName);
-%     myFile = textscan(fileID,'%s','delimiter','\n');    
-%     myFile = myFile{1};
-%     saveNextLine = 0;
-%     counter = 1;
-%     paramSubj = NaN(nCollapse, 10);
-%     for ii = 1 : size(paramSubj, 1)
-%         paramSubj(ii, :) = str2num(myFile{ii});
-%     end
-%     paramModel(kk, :) = mean(paramSubj(1:nCollapse, 2:end), 1);
-% end
-
-paramModel = [4.3425    6.2248           0.0000     19.1377    -9.6045   3.5283    2.0902    0.9927    0.6813;
-                    8.7205    8.8878           0.0000     33.0312   -21.2586   1.2076    1.8928    0.9215    0.4348;
-                    8.3099    8.7268           0.0000     13.9033   -12.6251   0.6127    2.7094    0.9468    0.5099;
-                    6.3379    8.4823           0.0000     19.3091   -12.7690   0.9699    2.6041    0.5558    0.4201;
-                    6.4379    9.9076           0.0000     32.5355   -17.6389   3.0964    1.5830    0.2067    0.4086;
-                    9.7284   15.1847           0.0000     56.3034   -42.2707   0.4378    4.0136    0.9881    0.5523;
-                    7.8510    9.8641           0.0000     22.8922   -18.0641   0.8543    3.9069    0.9646    0.4949];
+paramModel = NaN(length(subjectIDAll), 9);
+negLLH_1 = NaN(length(subjectIDAll), 1);
+path_fitResult = 'C:\Users\longluu\Documents\GitHub\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 2\Model fit\Fit result\Version 2 (free pC)\NoResample\';
+for kk = 1 : length(subjectIDAll)
+    fileName = [path_fitResult 'FitResult-' subjectIDAll{kk} '-extracted.txt'];
+    fileID = fopen(fileName);
+    paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f %f','CommentStyle','//');
+    result_mat = cell2mat(paramAll);
+    paramModel(kk, :) = result_mat(end, 2:end);
+    negLLH_1(kk, :) = result_mat(end, 1);
+    fclose(fileID);
+end
 
 noiseSensoryExp1 = paramModel(:, 1:2);
 noiseMemoryExp1 = paramModel(:, 6);
@@ -117,7 +106,7 @@ for nn = 1 : length(subjectIDAll)
     subjectID = subjectIDAll{nn};
     
     paramSubj = [paramsBootstrap{nn}; paramsFit(nn, :)];
-    for bb = subjIter(nn)+1
+    for bb = 1: subjIter(nn)+1
         %% LLH of oracle model
         [~, ~, ~, estimateData, ~, ~] = dataForFitting(subjectID, 0, 0);
         logLH = 0;
@@ -352,7 +341,7 @@ for nn = 1 : length(subjectIDAll)
             
             %% Variance only
             % Compute the estimate
-            std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+            std_combined = sqrt(stdSensory(kk)^2 + 0^2);
             pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
             pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);

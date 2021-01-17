@@ -3,8 +3,8 @@
 %%%%
 % 
 
-subjectID = 'average';
-experimentNumber = 1:7;
+subjectID = 'ln';
+experimentNumber = 1;
 experimentType = 'MainExperiment';
 experiment = 'Original';
 session = 1;

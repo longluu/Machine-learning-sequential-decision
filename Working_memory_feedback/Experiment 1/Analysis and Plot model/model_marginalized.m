@@ -3,10 +3,10 @@
 flagSC = 1; % 1: self-conditioned model
            % 0: standard Bayes
 includeIncongruentTrials = 0;
-correctType = 3; % 1: no resampling
+correctType = 1; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
                  % 3: no resampling, noise model, m_m sampled from N(theta, sigma_combined)
-incorrectType = 1; % 1: flip the decision bit
+incorrectType = 12; % 1: flip the decision bit
                    % 2: flip the estimates
                    % 3: resample mm, centered on mm, variance: sensory+memory
                    % 4: resample m, centered on m, variance: sensory+memory
@@ -17,8 +17,9 @@ incorrectType = 1; % 1: flip the decision bit
                    % 9: flip likelihood after conditioning p(mm|theta, Chat)
                    % 10: set new likelihood center at the estimate
                    % 11: weight LH width by confidence (KL, multiplicative)
+                   % 12: uncertainty only, estimate at std sensory
 dstep = 0.1;
-paramsAll = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.331    0.0000];
+paramsAll = [3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069    0.0000];
 lapseRate = paramsAll(3);
 
 % stimulus orientation
@@ -563,7 +564,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         pthhGthChccw(:, thetaStim < 0) = 0;         
     elseif incorrectType == 5
         pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
@@ -582,7 +583,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         pthhGthChccw(:, thetaStim < 0) = 0; 
     elseif incorrectType == 6
         % Compute the estimate
@@ -608,7 +609,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         pthhGthChccw(:, thetaStim < 0) = 0;   
     elseif incorrectType == 7
         % Likelihood function the same as correct decision p(mm|th) = N(th, sm^2 + smm^2)           
@@ -696,7 +697,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
         pthhGthChccw(:, thetaStim < 0) = 0;      
     elseif incorrectType == 8
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -758,7 +759,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         pthhGthChccw(:, thetaStim < 0) = 0; 
     elseif incorrectType == 9
         pmmGth = exp(-((MM_th-THmm).^2)./(2*(stdSensory(kk)^2 + stdMemory^2))); % p(mm|th) = N(th, sm^2 + smm^2)
@@ -899,7 +900,7 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
-        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim > 0) = 0;
         pthhGthChccw(:, thetaStim < 0) = 0;   
     elseif incorrectType == 11
         % Scale the LH width by KL divergence
@@ -976,8 +977,28 @@ for kk=1:length(stdSensory)
         end
 
         % remove 'correct' trials
+        pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+        pthhGthChccw(:, thetaStim < 0) = 0;  
+    elseif incorrectType == 12
+        std_combined = sqrt(stdSensory(kk)^2 + 0^2);        
+        pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
+        pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
+        pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
+
+        pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
+        pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
+        pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
+           
+
+        if includeIncongruentTrials == 0
+            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
+            pthhGthChccw(th'<= 0, :) = 0;
+            pthhGthChcw(th'> 0, :) = 0;
+        end
+
+        % remove 'correct' trials
         pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-        pthhGthChccw(:, thetaStim < 0) = 0;        
+        pthhGthChccw(:, thetaStim < 0) = 0;         
     end
     pthhGthChcw_norm = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);    
     pthhGthChccw_norm = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            

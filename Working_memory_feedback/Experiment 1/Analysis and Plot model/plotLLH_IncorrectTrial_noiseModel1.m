@@ -8,7 +8,7 @@ selectInd = [2 3 6 5];
 lowerCI = NaN(length(subjID), length(selectInd));
 upperCI = NaN(length(subjID), length(selectInd));
 paramsBootstrap = cell(1, length(subjID));
-path_bootstrap = 'C:\Users\kwsl455\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 1\Model fit\Fit result\No LH conditioning\Version 1\Bootstrap\NoResample\Decision and estimate\';
+path_bootstrap = 'C:\Users\longluu\Documents\GitHub\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 1\Model fit\Fit result\No LH conditioning\Version 1\Bootstrap\NoResample\Decision and estimate\';
 maxIter = 0;
 for kk = 1 : length(subjID)
     fileName = [path_bootstrap 'FitResult-Bootstrap-' subjID{kk} '.txt'];
@@ -49,7 +49,7 @@ end
 % Extract fit param
 paramModel = NaN(length(subjID), 8);
 negLLH_1 = NaN(length(subjID), 1);
-path_fitResult = 'C:\Users\kwsl455\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 1\Model fit\Fit result\No LH conditioning\Version 1\NoResample-eps=e-4,prior=30\';
+path_fitResult = 'C:\Users\longluu\Documents\GitHub\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 1\Model fit\Fit result\No LH conditioning\Version 1\NoResample-eps=e-4,prior=30\';
 for kk = 1 : length(subjID)
     fileName = [path_fitResult 'FitResult-' subjID{kk} '-extracted.txt'];
     fileID = fopen(fileName);
@@ -99,7 +99,7 @@ for nn = 1 : length(subjID)
     subjectID = subjID{nn};
     
     paramSubj = [paramsBootstrap{nn}; paramsFit(nn, 1:end-1)];
-    for bb = maxIter+1 : maxIter+1
+    for bb = 1 : maxIter+1
         %% LLH of oracle model
         [~, ~, ~, estimateData, angleDiff, ~] = dataForFitting(subjectID, 0, 0);
         logLH = 0;
@@ -333,7 +333,7 @@ for nn = 1 : length(subjID)
             logLH_Model(kk, 1) = logLikelihoodEstimate; 
 
             %% Model Variance only
-            std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+            std_combined = sqrt(stdSensory(kk)^2 + 0^2);
             pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
             pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
@@ -667,8 +667,9 @@ for nn = 1 : length(subjID)
                         
             %% Model surprise-weighted (KL)
             % Scale the LH width by KL divergence
-            log_base = 3;        
+            log_base = exp(1);        
             scale_factor = PCGm(2,:).*(log2(PCGm(2,:)./PCGm(1,:)) / log2(log_base)) + PCGm(1,:).*(log2(PCGm(1,:)./PCGm(2,:)) / log2(log_base));
+            scale_factor = interp1(m(~isnan(scale_factor)), scale_factor(~isnan(scale_factor)), m, 'linear', 'extrap');
             stdSensory_scale = sqrt(1+ scale_factor) * stdSensory(kk);
             pmGth = exp(-((M-THm).^2)./(2*stdSensory_scale.^2)');
 

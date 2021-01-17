@@ -20,23 +20,23 @@ estimateCCW_Data = NaN(length(subjectIDAll), 2);
 ciCW_Data = NaN(length(subjectIDAll), 2, 2);
 ciCCW_Data = NaN(length(subjectIDAll), 2, 2);
 
-% % No resample for correct trials                
-% paramsAllSubject = [4.3425    6.2248           0.0000     19.1377    -9.6045   3.5283    2.0902    0.9927    0.6813;
-%                     8.7205    8.8878           0.0000     33.0312   -21.2586   1.2076    1.8928    0.9215    0.4348;
-%                     8.3099    8.7268           0.0000     13.9033   -12.6251   0.6127    2.7094    0.9468    0.5099;
-%                     6.3379    8.4823           0.0000     19.3091   -12.7690   0.9699    2.6041    0.5558    0.4201;
-%                     6.4379    9.9076           0.0000     32.5355   -17.6389   3.0964    1.5830    0.2067    0.4086;
-%                     9.7284   15.1847           0.0000     56.3034   -42.2707   0.4378    4.0136    0.9881    0.5523;
-%                     7.8510    9.8641           0.0000     22.8922   -18.0641   0.8543    3.9069    0.9646    0.4949];
+% No resample for correct trials                
+paramsAllSubject = [4.3425    6.2248           0.0000     19.1377    -9.6045   3.5283    2.0902    0.9927    0.6813;
+                    8.7205    8.8878           0.0000     33.0312   -21.2586   1.2076    1.8928    0.9215    0.4348;
+                    8.3099    8.7268           0.0000     13.9033   -12.6251   0.6127    2.7094    0.9468    0.5099;
+                    6.3379    8.4823           0.0000     19.3091   -12.7690   0.9699    2.6041    0.5558    0.4201;
+                    6.4379    9.9076           0.0000     32.5355   -17.6389   3.0964    1.5830    0.2067    0.4086;
+                    9.7284   15.1847           0.0000     56.3034   -42.2707   0.4378    4.0136    0.9881    0.5523;
+                    7.8510    9.8641           0.0000     22.8922   -18.0641   0.8543    3.9069    0.9646    0.4949];
 
-% No resample for correct trials (fit relapse)               
-paramsAllSubject = [2.5841    4.6918           0.0327     19.1233    -9.9073   5.5023    2.0902    0.9984    0.7464;
-                    8.6334    8.8191           0.0043     33.0647   -21.3477   0.8755    1.8928    0.9127    0.4313;
-                    7.4646    7.8156           0.0241     13.6883   -12.2943   1.0845    2.7094    0.8384    0.5343;
-                    5.8649    8.0372           0.0075     19.2718   -12.7879   0.7122    2.6041    0.4691    0.4097;
-                    6.2094    9.8275           0.0010     32.6800   -17.6770   3.9740    1.5830    0.1959    0.4021;
-                    9.4508   14.9103           0.0007     58.8196   -39.8226   0.1698    4.0136    0.2880    0.5929;
-                    6.8495    9.2325           0.0127     22.7921   -18.3783   1.0853    3.9069    0.8675    0.5019];
+% % No resample for correct trials (fit relapse)               
+% paramsAllSubject = [2.5841    4.6918           0.0327     19.1233    -9.9073   5.5023    2.0902    0.9984    0.7464;
+%                     8.6334    8.8191           0.0043     33.0647   -21.3477   0.8755    1.8928    0.9127    0.4313;
+%                     7.4646    7.8156           0.0241     13.6883   -12.2943   1.0845    2.7094    0.8384    0.5343;
+%                     5.8649    8.0372           0.0075     19.2718   -12.7879   0.7122    2.6041    0.4691    0.4097;
+%                     6.2094    9.8275           0.0010     32.6800   -17.6770   3.9740    1.5830    0.1959    0.4021;
+%                     9.4508   14.9103           0.0007     58.8196   -39.8226   0.1698    4.0136    0.2880    0.5929;
+%                     6.8495    9.2325           0.0127     22.7921   -18.3783   1.0853    3.9069    0.8675    0.5019];
 
 % % Resample for correct trials                
 % paramsAllSubject = [5.1714    6.5149           0.0000     18.2531    -9.3607   0.9940    2.0902    0.9978    0.6635;
@@ -529,7 +529,7 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance only
         % Compute the estimate
-        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+        std_combined = sqrt(stdSensory(kk)^2 + 0^2);
         pthhGthChcw = repmat(normpdf(th', -std_combined, stdMotor), 1, length(thetaStim));
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1);   
         pthhGthChcw = pthhGthChcw  .* repmat(PChGtheta_lapse(1,:),nth,1);
@@ -754,7 +754,7 @@ ciCW_Data(:, 1, 2) = ciCW_Data(:, 1, 2) - estimateCW_Data(:, 1);
 ciCCW_Data(:, 2, 2) = ciCCW_Data(:, 2, 2) - estimateCCW_Data(:, 2);
 ciCW_Data(:, 2, 2) = ciCW_Data(:, 2, 2) - estimateCW_Data(:, 2);
 
-%% Plot the mean estimates
+%% Compare model and data
 figure
 colorName = {'SlateGray', 'DarkMagenta', 'DarkOrange', 'DarkGoldenRod', 'SpringGreen', 'Teal', 'DodgerBlue', 'Navy'};
 colorIndex = NaN(length(colorName), 3);
@@ -779,7 +779,6 @@ for ii = 1 : 7
 end
 axis off
 
-% Compare model and data
 estCCW_Data = estimateCCW_Data(:);
 estCW_Data = estimateCW_Data(:);
 estData = [estCCW_Data; estCW_Data];
@@ -905,62 +904,80 @@ r = round(corr(estData, estSurprise, 'type', 'Pearson'), 2);
 MSE = round(sum((estData - estSurprise).^2) / length(estData), 1);
 title (['Surprise-weighted, r: ' num2str(r) ', MSE: ' num2str(MSE)])
 
-% subplot(2, 4, 1)
-% hold on
-% set(gca, 'FontSize', 12)
-% for ii = 1 : length(subjectIDAll)
-%     plot(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), 'o', 'Color', colorIndex(ii, :))
-%     errorbarxy(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), ciCCW_Data(ii, 1, 1), ciCCW_Data(ii, 1, 2),...
-%                                                                 ciCW_Data(ii, 1, 1), ciCW_Data(ii, 1, 2), {'.', 'k', 'k'})
-%     plot(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-%     errorbarxy(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), ciCCW_Data(ii, 2, 1), ciCCW_Data(ii, 2, 2), ...
-%                                                                 ciCW_Data(ii, 2, 1), ciCW_Data(ii, 2, 2), {'.', 'k', 'k'})
-% end
-% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-% xlim([minPlot maxPlot])
-% ylim([minPlot maxPlot])
-% xlabel('Estimate CCW (deg)')
-% ylabel('Estimate CW (deg)')
-% title('Data')
-% 
-% subplot(2, 4, 2)
-% hold on
-% set(gca, 'FontSize', 12)
-% for ii = 1 : length(subjectIDAll)
-%     plot(estimateCCW_FlipEstimate(ii, 1), estimateCW_FlipEstimate(ii, 1), 'o', 'Color', colorIndex(ii, :))
-%     plot(estimateCCW_FlipEstimate(ii, 2), estimateCW_FlipEstimate(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-% end
-% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-% xlim([minPlot maxPlot])
-% ylim([minPlot maxPlot])
-% xlabel('Estimate CCW (deg)')
-% ylabel('Estimate CW (deg)')
-% title('Flip Estimate')
-% 
-% subplot(2, 4, 3)
-% hold on
-% set(gca, 'FontSize', 12)
-% for ii = 1 : length(subjectIDAll)
-%     plot(estimateCCW_FlipDecision(ii, 1), estimateCW_FlipDecision(ii, 1), 'o', 'Color', colorIndex(ii, :))
-%     plot(estimateCCW_FlipDecision(ii, 2), estimateCW_FlipDecision(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-% end
-% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-% xlim([minPlot maxPlot])
-% ylim([minPlot maxPlot])
-% xlabel('Estimate CCW (deg)')
-% ylabel('Estimate CW (deg)')
-% title('Flip Decision')
-% 
-% subplot(2, 4, 4)
-% hold on
-% set(gca, 'FontSize', 12)
-% for ii = 1 : length(subjectIDAll)
-%     plot(estimateCCW_Resample(ii, 1), estimateCW_Resample(ii, 1), 'o', 'Color', colorIndex(ii, :))
-%     plot(estimateCCW_Resample(ii, 2), estimateCW_Resample(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
-% end
-% plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
-% xlim([minPlot maxPlot])
-% ylim([minPlot maxPlot])
-% xlabel('Estimate CCW (deg)')
-% ylabel('Estimate CW (deg)')
-% title('Resample')
+%% Compare CW vs. CCW
+figure
+hold on
+
+subplot(1, 5, 1)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), 'o', 'Color', colorIndex(ii, :))
+    errorbarxy(estimateCCW_Data(ii, 1), estimateCW_Data(ii, 1), ciCCW_Data(ii, 1, 1), ciCCW_Data(ii, 1, 2),...
+                                                                ciCW_Data(ii, 1, 1), ciCW_Data(ii, 1, 2), {'.', 'k', 'k'})
+    plot(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+    errorbarxy(estimateCCW_Data(ii, 2), estimateCW_Data(ii, 2), ciCCW_Data(ii, 2, 1), ciCCW_Data(ii, 2, 2), ...
+                                                                ciCW_Data(ii, 2, 1), ciCW_Data(ii, 2, 2), {'.', 'k', 'k'})
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Estimate CCW (deg)')
+ylabel('Estimate CW (deg)')
+title('Data')
+
+subplot(1, 5, 2)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot(estimateCCW_Variance(ii, 1), estimateCW_Variance(ii, 1), 'o', 'Color', colorIndex(ii, :))
+    plot(estimateCCW_Variance(ii, 2), estimateCW_Variance(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Estimate CCW (deg)')
+ylabel('Estimate CW (deg)')
+title('Uncertainty')
+
+subplot(1, 5, 3)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot(estimateCCW_FlipDecision(ii, 1), estimateCW_FlipDecision(ii, 1), 'o', 'Color', colorIndex(ii, :))
+    plot(estimateCCW_FlipDecision(ii, 2), estimateCW_FlipDecision(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Estimate CCW (deg)')
+ylabel('Estimate CW (deg)')
+title('Flip Decision')
+
+subplot(1, 5, 4)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot(estimateCCW_Resample(ii, 1), estimateCW_Resample(ii, 1), 'o', 'Color', colorIndex(ii, :))
+    plot(estimateCCW_Resample(ii, 2), estimateCW_Resample(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Estimate CCW (deg)')
+ylabel('Estimate CW (deg)')
+title('Resample')
+
+subplot(1, 5, 5)
+hold on
+set(gca, 'FontSize', 12)
+for ii = 1 : length(subjectIDAll)
+    plot(estimateCCW_Surprise(ii, 1), estimateCW_Surprise(ii, 1), 'o', 'Color', colorIndex(ii, :))
+    plot(estimateCCW_Surprise(ii, 2), estimateCW_Surprise(ii, 2), 'x', 'Color', colorIndex(ii, :), 'MarkerSize', 10)
+end
+plot([minPlot maxPlot], [minPlot maxPlot], 'k--')
+xlim([minPlot maxPlot])
+ylim([minPlot maxPlot])
+xlabel('Estimate CCW (deg)')
+ylabel('Estimate CW (deg)')
+title('Surprise-weighted')

@@ -1,13 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%% Plot LLH and fit params from correct trials %%%%%%%%%%%%%%%%%%%%%%%
 
-subjID = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh'}; % 
+subjectIDAll = {'ll', 'pw', 'eh', 'bh', 'ln', 'at', 'dh'}; % 
 
 %% No resample
-paramModel = NaN(length(subjID), 9);
-negLLH_1 = NaN(length(subjID), 1);
+paramModel = NaN(length(subjectIDAll), 9);
+negLLH_1 = NaN(length(subjectIDAll), 1);
 path_fitResult = 'C:\Users\kwsl455\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 2\Model fit\Fit result\Version 2 (free pC)\NoResample\';
-for kk = 1 : length(subjID)
-    fileName = [path_fitResult 'FitResult-' subjID{kk} '-extracted.txt'];
+for kk = 1 : length(subjectIDAll)
+    fileName = [path_fitResult 'FitResult-' subjectIDAll{kk} '-extracted.txt'];
     fileID = fopen(fileName);
     paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f %f','CommentStyle','//');
     result_mat = cell2mat(paramAll);
@@ -46,11 +46,11 @@ ylabel('-LLH')
 box off
 
 %% No resample, m_m sampled from theta
-paramModel = NaN(length(subjID), 9);
-negLLH = NaN(length(subjID), 1);
+paramModel = NaN(length(subjectIDAll), 9);
+negLLH = NaN(length(subjectIDAll), 1);
 path_fitResult = 'C:\Users\kwsl455\Machine-learning-sequential-decision\Working_memory_feedback\Experiment 2\Model fit\Fit result\Version 2 (free pC)\NoResample_MmFromTheta\';
-for kk = 1 : length(subjID)
-    fileName = [path_fitResult 'FitResult-' subjID{kk} '-extracted.txt'];
+for kk = 1 : length(subjectIDAll)
+    fileName = [path_fitResult 'FitResult-' subjectIDAll{kk} '-extracted.txt'];
     fileID = fopen(fileName);
     paramAll = textscan(fileID,'%f %f %f %f %f %f %f %f %f %f','CommentStyle','//');
     result_mat = cell2mat(paramAll);

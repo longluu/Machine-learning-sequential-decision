@@ -3,7 +3,7 @@
 %%%%
 % 
 
-subjectID = 'jp';
+subjectID = 'an';
 experimentNumber = 1;
 experimentType = 'MainExperiment';
 experiment = 'Original';

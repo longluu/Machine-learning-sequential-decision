@@ -11,19 +11,19 @@ estimate_Prior = NaN(length(subjectIDAll), 2, 8);
 estimate_Data = NaN(length(subjectIDAll), 2, 8);
 std_memory_increase = 2;
 
-% % No resample for correct trials
-% paramsAllSubject = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
-%                     3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
-%                     4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
-%                     7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
-%                     5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
+% No resample for correct trials
+paramsAllSubject = [2.6500    6.0895           0.0000     22.2852     1.6506   0.9414    2.0976;
+                    3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069;
+                    4.6136   10.4165           0.0000     29.8375     0.1325   0.9940    3.8106;
+                    7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551;
+                    5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313];
 
-% % No resample for correct trials (fit lapse)
-paramsAllSubject = [2.5723    6.1610           0.0006     21.8383     1.9938   0.9996    2.0976;
-                    2.7246    9.7063           0.0014     34.5490     0.0585   0.9340    3.1069;
-                    3.9397   10.3896           0.0052     30.4242     0.3831   0.9913    3.8106;
-                    7.6409   11.7697           0.0121     58.7682     0.0304   0.3595    3.8551;
-                    5.1069   10.3539           0.0000     45.1349     4.8105   0.8796    3.3313];
+% % % No resample for correct trials (fit lapse)
+% paramsAllSubject = [2.5723    6.1610           0.0006     21.8383     1.9938   0.9996    2.0976;
+%                     2.7246    9.7063           0.0014     34.5490     0.0585   0.9340    3.1069;
+%                     3.9397   10.3896           0.0052     30.4242     0.3831   0.9913    3.8106;
+%                     7.6409   11.7697           0.0121     58.7682     0.0304   0.3595    3.8551;
+%                     5.1069   10.3539           0.0000     45.1349     4.8105   0.8796    3.3313];
 
 % % Resample for correct trials
 % paramsAllSubject = [2.7354    6.1605           0.0000     21.7403     1.5041   0.9972    2.0976;
@@ -297,7 +297,7 @@ for nn = 1 : length(subjectIDAll)
         
         %% Variance model
         % Compute the estimate
-        std_combined = sqrt(stdSensory(kk)^2 + stdMemory^2);
+        std_combined = sqrt(stdSensory(kk)^2 + 0^2);
         pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
         pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
