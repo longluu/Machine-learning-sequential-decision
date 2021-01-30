@@ -648,7 +648,7 @@ for nn = 1 : length(subjectIDAll)
         
         %% Weight LH width by surprise (KL divergence)
         % Scale the LH width by KL divergence
-        log_base = 3;        
+        log_base = exp(1);        
         scale_factor = PCGm(2,:).*(log2(PCGm(2,:)./PCGm(1,:)) / log2(log_base)) + PCGm(1,:).*(log2(PCGm(1,:)./PCGm(2,:)) / log2(log_base));
         stdSensory_scale = sqrt(1+ scale_factor) * stdSensory(kk);
         pmGth = exp(-((M-THm).^2)./(2*stdSensory_scale.^2)');

@@ -1,6 +1,6 @@
 %%%% Plot the model along with subjects' data
 %% Set condition
-subjectID = {'kc'};
+subjectID = {'jp'};
 experimentNumber = 1;
 experimentType = 'MainExperiment';
 experiment = 'Original';
@@ -27,9 +27,9 @@ flagSC = 1; % 1: Self-conditioned
             % 0: Full Bayes
             
 if correctType == 1
-    paramsFit = [5.2200   9.5650            0          48.1703     0.0548   0.9768    3.3234	   0]; % no resample
+    paramsFit = [7.7094   11.9114           0.0000     55.7419     0.0083   0.2850    3.8551    0.0000]; % no resample
 elseif correctType == 2
-    paramsFit = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000]; % resample   
+    paramsFit = [7.8828   12.2344           0.0000     54.5629     0.1530   0.6860    3.8551    0.0000]; % resample   
 elseif correctType == 3
     paramsFit = [5.1170    9.4458           0.0000     47.1315     0.4016   0.9851    3.3234    0.0000]; % resample       
 end

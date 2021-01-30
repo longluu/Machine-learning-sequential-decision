@@ -1,6 +1,6 @@
 %%%% Plot the model along with subjects' data
 %% Set the condition
-subjectID = {'ln'};
+subjectID = {'at'};
 experimentNumber = 1;
 experimentType = 'MainExperiment';
 experiment = 'Original';
@@ -16,7 +16,7 @@ end
 
 includeIncongruentTrials = 0; 
 
-correctType = 1; % 1: no resampling
+correctType = 2; % 1: no resampling
                  % 2: resampling (center m, variance: memory)
 incorrectType = 4; % 1: flip the decision bit
                    % 2: flip the estimates
@@ -26,9 +26,9 @@ flagSC = 1; % 1: Self-conditioned
             % 0: Full Bayes
             
 if correctType == 1
-    paramsFit = [7.3559    9.9743           0.0000     25.7467   -15.1199   0.1192    4.9975    0.9760    0.5276]; % no resample    
+    paramsFit = [9.5352   14.9322           0.0000     59.0963   -39.5422   0.0107    4.0136    0.2256    0.5943]; % no resample    
 elseif correctType == 2
-    paramsFit = [6.9011    8.7172           0.0000     33.0973   -19.3675   0.8412    2.6349    0.9895    0.5503]; % resample    
+    paramsFit = [9.5352   14.9322           0.0000     59.0963   -39.5422   0.0107    4.0136    0.2256    0.5943]; % resample    
 end
 stdSensory = paramsFit(1:2);
 priorRange = paramsFit(4);

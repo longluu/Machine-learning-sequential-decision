@@ -19,7 +19,7 @@ incorrectType = 12; % 1: flip the decision bit
                    % 11: weight LH width by confidence (KL, multiplicative)
                    % 12: uncertainty only, estimate at std sensory
 dstep = 0.1;
-paramsAll = [3.0023    9.7384           0.0000     34.4053     0.0615   0.9480    3.1069    0.0000];
+paramsAll = [5.1033   10.3703           0.0000     46.6421     4.7921   0.8187    3.3313    0.0000];
 lapseRate = paramsAll(3);
 
 % stimulus orientation
