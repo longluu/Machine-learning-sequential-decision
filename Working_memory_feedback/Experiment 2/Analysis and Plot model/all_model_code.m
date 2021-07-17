@@ -1,17 +1,22 @@
+%%%%%% This code run the the models simulating the distribution of correct 
+%%%%%% and incorrect trials in the PLOS Comp paper. Set the incorrectType
+%%%%%% flag to indicate 1 of 5 models for incorrect trials. Similarly, set
+%%%%%% the correctType to choose which model for correct trials.
 function all_model_code
     flagSC = 1; % 1: self-conditioned model
                % 0: standard Bayes
     correctType = 1; % 1: no resampling
-                     % 2: resampling (center m, variance: memory)
-    incorrectType = 4; % 1: Flip Decision
+                     % 2: resampling
+    incorrectType = 2; % 1: Flip Decision
                        % 2: Resampled
                        % 3: Prior only
                        % 4: Uncertainty only
                        % 5: Reweighted
-    includeIncongruentTrials = 0;
-
     dstep = 0.1;
-    paramsAll = [7.9419    9.9964           0.0000     40   -20   0.3959    3.9069    0.9850    0.4941];
+    
+    % Here, the model parameters corresponds to subject S9 in Exp 2, see
+    % Fig. 10
+    paramsAll = [6.4379    9.9076           0.0000     32.5355   -17.6389   3.0964    1.5830    0.2067    0.4086];
     lapseRate = paramsAll(3);
 
     % stimulus orientation
@@ -54,10 +59,6 @@ function all_model_code
         pthGC(2,:) = pth;
     end
 
-    pth_erased = zeros(2,nth);
-    pth_erased(1, th >= 0) = 1;
-    pth_erased(2, th < 0) = 1;
-
     h1 = figure;
     h2 = figure;
     for kk=1:length(stdSensory)  
@@ -81,13 +82,10 @@ function all_model_code
         M = repmat(m',1,nth);
         MM_m = repmat(mm',1,nm);
         MM_th = repmat(mm',1,nth); 
-        MM_ths = repmat(mm',1,length(thetaStim));
-        MR_mm = repmat(mr', 1, nmm);
         MR_th = repmat(mr', 1, nth);
         THm = repmat(th, nm, 1); 
         THmm = repmat(th, nmm, 1);
         THmr = repmat(th, nmr, 1);
-        THSmm = repmat(thetaStim, nmm, 1);
 
         %% Correct trials
         % Generative (forward)
@@ -237,35 +235,8 @@ function all_model_code
         pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
         pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
-        if includeIncongruentTrials == 0
-            % modify psychometric curve p(Chat|theta, Congruent) ~ p(Congruent| Chat, theta) * p(Chat|Theta)
-            pCongruentGcwTh = sum(pthhGthChcw(th' >= 0, :));
-            pCongruentGccwTh = sum(pthhGthChccw(th' <= 0, :));
-            PChGtheta_lapse_new = PChGtheta_lapse .* [pCongruentGcwTh; pCongruentGccwTh];
-            PChGtheta_lapse_new = PChGtheta_lapse_new ./ repmat(sum(PChGtheta_lapse_new, 1), 2, 1);
-
-            % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-            pthhGthChccw(th'>= 0, :) = 0;
-            pthhGthChcw(th'< 0, :) = 0;
-        else
-            PChGtheta_lapse_new = PChGtheta_lapse;
-        end
-
-        if incorrectType == 2
-            pthhGthChcw_Incorrect = pthhGthChcw;
-            pthhGthChccw_Incorrect = pthhGthChccw;
-
-            % remove correct trials
-            pthhGthChcw_Incorrect(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
-            pthhGthChccw_Incorrect(:, thetaStim < 0) = 0;
-
-            % flip the estimate
-            pthhGthChcw_Incorrect = flipud(pthhGthChcw_Incorrect);
-            pthhGthChccw_Incorrect = flipud(pthhGthChccw_Incorrect);
-        end
-
         % remove incorrect trials
-        pthhGthChcw(:, thetaStim < 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+        pthhGthChcw(:, thetaStim < 0) = 0;                                                              
         pthhGthChccw(:, thetaStim > 0) = 0;
 
 
@@ -335,14 +306,8 @@ function all_model_code
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
-
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
             pthhGthChccw(:, thetaStim < 0) = 0;
         elseif incorrectType == 2
             % Likelihood function the same as correct decision p(mm|th) = N(th, sm^2 + smm^2)           
@@ -415,14 +380,8 @@ function all_model_code
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
-
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
             pthhGthChccw(:, thetaStim < 0) = 0;         
         elseif incorrectType == 3
             pthhGthChcw = repmat(normpdf(th', pthccw/2, stdMotor), 1, length(thetaStim));
@@ -433,15 +392,8 @@ function all_model_code
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
             pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
 
-
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
-
             % remove 'correct' trials
-            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          hcw(:, thetaStim < 0) = 0;
+            pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
             pthhGthChccw(:, thetaStim < 0) = 0; 
         elseif incorrectType == 4
             %% Variance only
@@ -454,13 +406,6 @@ function all_model_code
             pthhGthChccw = repmat(normpdf(th', std_combined, stdMotor), 1, length(thetaStim)) .* repmat(PChGtheta_lapse(2,:),nth,1); 
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1); 
             pthhGthChccw =  pthhGthChccw .* repmat(PChGtheta_lapse(2,:),nth,1); 
-
-
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
 
             % remove 'correct' trials
             pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
@@ -491,7 +436,7 @@ function all_model_code
             indKeepCw = find(mm>=0);      
             EthChcw = EthChcw(indKeepCw);
             while (sum(diff(EthChcw)>=0) > 0) 
-                indDiscardCw = [diff(EthChcw)>=0];
+                indDiscardCw = diff(EthChcw)>=0;
                 EthChcw(indDiscardCw) = [];
                 indKeepCw(indDiscardCw) = [];
             end
@@ -534,12 +479,6 @@ function all_model_code
             pthhGthChcw = pthhGthChcw./repmat(sum(pthhGthChcw,1),nth,1); % normalize - conv2 is not    
             pthhGthChccw = pthhGthChccw./repmat(sum(pthhGthChccw,1),nth,1);            
 
-            if includeIncongruentTrials == 0
-                % modify the estimate distribution p(thetaHat|theta, Chat, Congrudent)
-                pthhGthChccw(th'<= 0, :) = 0;
-                pthhGthChcw(th'> 0, :) = 0;
-            end
-
             % remove 'correct' trials
             pthhGthChcw(:, thetaStim > 0) = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
             pthhGthChccw(:, thetaStim < 0) = 0;           
@@ -559,16 +498,14 @@ function all_model_code
 
         %% plot
         showrange = [min(thetaStim) max(thetaStim)];
-        ind = find(thetaStim >= showrange(1) & thetaStim <= showrange(2));
-        nthshow = length(ind);
-
+        
         figure(h1)
         subplot(2,3,1);
         pthres = 0.075;
-        ind = find(PChGtheta_lapse_new(1,:)>pthres);
+        ind = find(PChGtheta_lapse(1,:)>pthres);
         plot(thetaStim(ind),mthhGthChcw_correct(ind),'c-','linewidth',2);
         hold on;
-        ind = find(PChGtheta_lapse_new(2,:)>pthres);
+        ind = find(PChGtheta_lapse(2,:)>pthres);
         plot(thetaStim(ind),mthhGthChccw_correct(ind),'g-','linewidth',2);
         axis([showrange(1) showrange(2) -40 40]);
         if kk==1
@@ -630,10 +567,10 @@ function all_model_code
 
         subplot(2,3,4);
         pthres = 0.000075;
-        ind = find(PChGtheta_lapse_new(1,:)>pthres);
+        ind = find(PChGtheta_lapse(1,:)>pthres);
         plot(thetaStim(ind),mthhGthChcw_incorrect(ind),'c-','linewidth',2);
         hold on;
-        ind = find(PChGtheta_lapse_new(2,:)>pthres);
+        ind = find(PChGtheta_lapse(2,:)>pthres);
         plot(thetaStim(ind),mthhGthChccw_incorrect(ind),'g-','linewidth',2);
         axis([showrange(1) showrange(2) yRange(1) yRange(2)]);
         if kk==1
@@ -644,7 +581,7 @@ function all_model_code
 
         figure(h2)
         hold on
-        plot(thetaStim, PChGtheta_lapse_new(1, :))
+        plot(thetaStim, PChGtheta_lapse(1, :))
         plot([0 0], [0 1], 'k--')
         plot([thetaStim(1) thetaStim(end)], [0.5 0.5], 'k--')
     end

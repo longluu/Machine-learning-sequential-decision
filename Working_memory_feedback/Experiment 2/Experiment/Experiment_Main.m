@@ -40,7 +40,9 @@ end
 %  Column 3: SOA
 %  Column 4: bar noise level
 %  Column 5: bar reference angle
-%  Column 6 to 8: data (categorical decision and estimation)
+%  Column 6: subject's categorical decision
+%  Column 7: subject's estimate
+%  Column 8: true category
 %  Column 9: true angle difference (sample) 
 %  Column 10: decision time
 %  Column 11: estimation time

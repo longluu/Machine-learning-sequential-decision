@@ -3,8 +3,8 @@
 %%%%
 % 
 
-subjectID = 'an';
-experimentNumber = 1;
+subjectID = 'average';
+experimentNumber = 1:5;
 experimentType = 'MainExperiment';
 experiment = 'Original';
 session = 1;
@@ -52,14 +52,15 @@ if strcmp(experimentType, 'MotorNoise')
 end
 
 %% Extract data
-%  Column 1: angle differences (theta1 - theta2)
+%  Column 1: true angle difference (population)
 %  Column 2: bar presentation time
 %  Column 3: SOA
-%  Column 4: bar Stimulus noise
+%  Column 4: bar noise level
 %  Column 5: bar reference angle
-%  Column 6: CW/CCW OR Red/Green
-%  Column 7: estimated angle
-%  Column 8: given CW/CCW
+%  Column 6: subject's categorical decision
+%  Column 7: subject's estimate
+%  Column 8: true category
+%  Column 9: true angle difference (sample) 
 stdNoiseLevel = unique(dataAll(:,4));
 angleDiff = (unique(dataAll(:,1)))';
 dataZeroDiff = dataAll(dataAll(:,1) == 0,:);
