@@ -25,7 +25,7 @@ In fact, the model can account for the data across a wide range of situations. H
 In my paper, you can find several other situations that the model can explain the data well (both my data and other people's data).
 
 # Model predicts data in different conditions
-Ok now we see that the model can fit the data across many different situation with a few meaningful parameters. However, can the model generalize (i.e. predict) the data in a totally new conditions? Because I'm still working on the papers for those situations, I just show 2 examples here.
+Ok now we see that the model can fit the data across many different situation with a few meaningful parameters. However, can the model generalize (i.e. predict) the data in a totally new conditions? I just show 2 examples here but you can read my full published paper here https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008968.
 
 ## Fit correct trials, predict incorrect trials
 First, in this situation, we fit the model to data in correct trials and predict the data in incorrect trials. The  results show that the model can generalize well to another condition.
@@ -33,7 +33,7 @@ First, in this situation, we fit the model to data in correct trials and predict
 ![](/figures/fig4.png)
 
 ## Fit one experiment, predict another one
-Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation.
+Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation. 
 
 ![](/figures/fig5.png)
 
