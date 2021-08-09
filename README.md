@@ -33,7 +33,7 @@ First, in this situation, we fit the model to data in correct trials and predict
 ![](/figures/fig4.png)
 
 ## Fit one experiment, predict another one
-Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation. 
+Now, let's bring it up another level. I fit the model to the data in one experiment (condition 1) and try to predict the data in a totally different experiment (condition 2). Again, the results demonstrate that the model can generalize very well to a totally different situation. More details can be found here https://github.com/longluu/High-to-low-visual-decoding.
 
 ![](/figures/fig5.png)
 
